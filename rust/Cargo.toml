@@ -20,6 +20,6 @@ repository = "https://github.com/kent-tokyo/passoflow"
 unsafe_code = "deny"
 
 [workspace.lints.clippy]
-all = "warn"
-pedantic = "warn"
-collapsible_if = "allow"
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+collapsible_if = { level = "allow", priority = 1 }

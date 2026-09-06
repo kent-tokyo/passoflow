@@ -282,7 +282,7 @@ impl MatchCandidate {
 
 fn round_half_even(value: u32) -> Result<i32, VisionError> {
     let lower = value / 2;
-    let rounded = if value % 2 == 0 || lower % 2 == 0 {
+    let rounded = if value.is_multiple_of(2) || lower.is_multiple_of(2) {
         lower
     } else {
         lower + 1
