@@ -68,6 +68,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Consume the plan in the opt-in runner as a pre-execution step-alignment safety gate.
 - [x] Add non-mutating Rust-side `{{variable}}` resolution for planned action parameters, including nested YAML values.
 - [x] Expose deterministic branch boundaries and contiguous loop ranges from the Rust execution plan.
+- [x] Add a pure Rust selector that applies branch decisions and expands fixed-count loops while leaving table loops for runtime data.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 

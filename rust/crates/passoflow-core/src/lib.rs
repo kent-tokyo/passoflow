@@ -192,7 +192,66 @@ pub struct LoopBoundary {
     pub table: Option<String>,
 }
 
+/// One step selected for execution, including its fixed-loop iteration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectedStep {
+    pub step: PlannedStep,
+    /// Zero for a non-loop step; fixed-loop iterations are one-based.
+    pub iteration: u32,
+}
+
+/// Errors returned when a structural plan cannot be reduced to executable steps.
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum ControlFlowError {
+    #[error("missing branch decision for if step {0}")]
+    MissingBranchDecision(u32),
+    #[error("table loop '{label}' at steps {start_step}-{end_step} requires runtime rows")]
+    RuntimeTableLoop {
+        label: String,
+        start_step: u32,
+        end_step: u32,
+    },
+    #[error("fixed loop '{label}' has invalid count {count:?}")]
+    InvalidLoopCount { label: String, count: Option<i64> },
+}
+
 impl ExecutionPlan {
+    /// Select executable steps using caller-provided decisions for each `if`.
+    ///
+    /// Structural markers are omitted, fixed-count loops are expanded, and
+    /// nested branches are handled recursively. Conditions remain outside the
+    /// core because they depend on runtime variables and prior action results.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a branch decision is missing or a table-backed
+    /// loop needs runtime rows.
+    pub fn select_steps(
+        &self,
+        branch_decisions: &BTreeMap<u32, bool>,
+    ) -> Result<Vec<SelectedStep>, ControlFlowError> {
+        let control_flow = self.control_flow();
+        let branches: BTreeMap<u32, BranchBoundary> = control_flow
+            .branches
+            .into_iter()
+            .map(|branch| (branch.if_step, branch))
+            .collect();
+        let loops: BTreeMap<u32, LoopBoundary> = control_flow
+            .loops
+            .into_iter()
+            .map(|loop_range| (loop_range.start_step, loop_range))
+            .collect();
+        select_range(
+            &self.steps,
+            0,
+            self.steps.len(),
+            branch_decisions,
+            &branches,
+            &loops,
+            None,
+        )
+    }
+
     /// Extract deterministic branch and loop ranges without evaluating them.
     #[must_use]
     pub fn control_flow(&self) -> ControlFlowPlan {
@@ -270,6 +329,114 @@ impl ExecutionPlan {
                 .collect(),
         }
     }
+}
+
+fn select_range(
+    steps: &[PlannedStep],
+    start: usize,
+    end: usize,
+    branch_decisions: &BTreeMap<u32, bool>,
+    branches: &BTreeMap<u32, BranchBoundary>,
+    loops: &BTreeMap<u32, LoopBoundary>,
+    active_loop: Option<&str>,
+) -> Result<Vec<SelectedStep>, ControlFlowError> {
+    let mut selected = Vec::new();
+    let mut index = start;
+    while index < end {
+        let current = &steps[index];
+        if current.action == "if" {
+            let boundary = branches
+                .get(&current.index)
+                .expect("validated plan must contain an if boundary");
+            let take_true = branch_decisions
+                .get(&current.index)
+                .copied()
+                .ok_or(ControlFlowError::MissingBranchDecision(current.index))?;
+            let branch_start = if take_true {
+                index + 1
+            } else {
+                boundary
+                    .else_step
+                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+            };
+            let branch_end = if take_true {
+                boundary
+                    .else_step
+                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+            } else {
+                boundary.endif_step as usize
+            };
+            selected.extend(select_range(
+                steps,
+                branch_start,
+                branch_end,
+                branch_decisions,
+                branches,
+                loops,
+                active_loop,
+            )?);
+            index = boundary.endif_step as usize;
+            continue;
+        }
+        if current.action == "else" || current.action == "endif" {
+            index += 1;
+            continue;
+        }
+        if let Some(label) = current.loop_label.as_deref()
+            && active_loop != Some(label)
+        {
+            let loop_range = loops
+                .get(&current.index)
+                .expect("validated plan must contain a loop boundary");
+            let count = loop_range
+                .count
+                .ok_or_else(|| ControlFlowError::InvalidLoopCount {
+                    label: label.to_owned(),
+                    count: loop_range.count,
+                })?;
+            let count = u32::try_from(count).map_err(|_| ControlFlowError::InvalidLoopCount {
+                label: label.to_owned(),
+                count: loop_range.count,
+            })?;
+            if count == 0 {
+                return Err(ControlFlowError::InvalidLoopCount {
+                    label: label.to_owned(),
+                    count: loop_range.count,
+                });
+            }
+            if loop_range.table.is_some() {
+                return Err(ControlFlowError::RuntimeTableLoop {
+                    label: label.to_owned(),
+                    start_step: loop_range.start_step,
+                    end_step: loop_range.end_step,
+                });
+            }
+            let loop_end = loop_range.end_step as usize;
+            for iteration in 1..=count {
+                let body = select_range(
+                    steps,
+                    index,
+                    loop_end,
+                    branch_decisions,
+                    branches,
+                    loops,
+                    Some(label),
+                )?;
+                selected.extend(body.into_iter().map(|mut selected_step| {
+                    selected_step.iteration = iteration;
+                    selected_step
+                }));
+            }
+            index = loop_end;
+            continue;
+        }
+        selected.push(SelectedStep {
+            step: current.clone(),
+            iteration: 0,
+        });
+        index += 1;
+    }
+    Ok(selected)
 }
 
 /// Versioned local event emitted by the future engine and binding adapters.
@@ -978,8 +1145,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::{
-        ActionOutcome, ActionResult, BranchBoundary, CONTRACT_VERSION, LoopBoundary, RunEvent,
-        Scenario, Severity,
+        ActionOutcome, ActionResult, BranchBoundary, CONTRACT_VERSION, ControlFlowError,
+        LoopBoundary, RunEvent, Scenario, Severity,
     };
     use serde_yaml::Value;
 
@@ -1165,6 +1332,36 @@ mod tests {
                 count: Some(3),
                 table: None,
             }]
+        );
+    }
+
+    #[test]
+    fn selects_one_branch_and_expands_fixed_loops() {
+        let scenario = Scenario::from_yaml(
+            "steps:\n  - action: if\n    variable: ready\n  - action: noop\n  - action: else\n  - action: wait\n    ms: 2\n  - action: endif\n  - action: click_image\n    images: [one.png]\n    loop: retry\n    loop_count: 2\n  - action: wait\n    ms: 1\n    loop: retry\n    loop_count: 2\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let decisions = BTreeMap::from([(1, false)]);
+        let selected = plan
+            .select_steps(&decisions)
+            .expect("selection should succeed");
+
+        assert_eq!(
+            selected
+                .iter()
+                .map(|selected_step| selected_step.step.action.as_str())
+                .collect::<Vec<_>>(),
+            vec!["wait", "click_image", "wait", "click_image", "wait"]
+        );
+        assert_eq!(selected[0].iteration, 0);
+        assert_eq!(selected[1].iteration, 1);
+        assert_eq!(selected[2].iteration, 1);
+        assert_eq!(selected[3].iteration, 2);
+        assert_eq!(selected[4].iteration, 2);
+        assert_eq!(
+            plan.select_steps(&BTreeMap::new()),
+            Err(ControlFlowError::MissingBranchDecision(1))
         );
     }
 }

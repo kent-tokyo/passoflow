@@ -90,6 +90,9 @@ The same concepts are exposed by `passoflow-core` as
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
+- `ExecutionPlan::select_steps` applies caller-supplied branch decisions and
+  expands fixed-count loops. Table-backed loops remain an explicit runtime-data
+  boundary, and missing branch decisions fail closed.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.

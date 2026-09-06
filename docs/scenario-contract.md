@@ -39,6 +39,9 @@ an unset variable becomes an empty string, matching the current Python runner.
 The plan also exposes nested `if`/`else`/`endif` boundaries and contiguous loop
 ranges as a separate control-flow view; it does not evaluate conditions or
 invoke platform adapters.
+Given caller-supplied decisions, the Rust core can select one branch and expand
+fixed-count loops into an executable step sequence. Table-backed loops return a
+runtime-data error until their rows are supplied by the engine.
 
 ## Action outcomes
 

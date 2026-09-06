@@ -68,6 +68,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] オプトインrunnerで実行前に計画とステップの整合性を確認する安全ゲートを追加する。
 - [x] planのaction parameterに対する非破壊のRust側`{{variable}}`展開を、入れ子のYAML値を含めて追加する。
 - [x] Rust execution planから分岐境界と連続したloop範囲を決定的に取得できるようにする。
+- [x] 分岐判定を適用し、固定回数loopを展開する純粋なRust selectorを追加する（table loopは実行時データに委ねる）。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 

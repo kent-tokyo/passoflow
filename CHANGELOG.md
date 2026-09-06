@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Tightened Rust DOM navigation validation to require an HTTP(S) host and reject whitespace or control characters.
 - Added non-mutating recursive variable resolution for Rust execution-plan parameters.
 - Added deterministic branch-boundary and contiguous-loop metadata to Rust execution plans.
+- Added a fail-closed Rust selector for chosen branches and fixed-count loops.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed
