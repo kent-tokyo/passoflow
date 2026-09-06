@@ -50,8 +50,14 @@ impl BrowserAction {
     pub fn validate(&self) -> Result<(), BrowserError> {
         match self {
             Self::Navigate { url } => {
-                let scheme = url.split_once("://").map(|(scheme, _)| scheme);
-                if !matches!(scheme, Some("http" | "https")) {
+                let supported = url.split_once("://").is_some_and(|(scheme, authority)| {
+                    let host = authority.split(['/', '?', '#']).next().unwrap_or_default();
+                    matches!(scheme, "http" | "https")
+                        && !host.trim().is_empty()
+                        && !url.chars().any(char::is_whitespace)
+                        && !url.chars().any(char::is_control)
+                });
+                if !supported {
                     return Err(BrowserError::InvalidUrl { url: url.clone() });
                 }
             }
@@ -243,6 +249,17 @@ mod tests {
             ),
             Err(BrowserError::InvalidUrl {
                 url: "file:///secret".to_owned()
+            })
+        );
+        assert_eq!(
+            execute(
+                &mut browser,
+                &BrowserAction::Navigate {
+                    url: "https://".to_owned(),
+                },
+            ),
+            Err(BrowserError::InvalidUrl {
+                url: "https://".to_owned()
             })
         );
         assert_eq!(

@@ -2,7 +2,7 @@
 
 Small follow-up items within PassoFlow's local-first scope:
 
-- [ ] Freeze the complete YAML/action/outcome contract and confirm license metadata.
+- [ ] Freeze the complete YAML/action/outcome contract.
 - [ ] Add Rust DOM actions and publish the completed Python wheel path.
 
 Keep larger orchestration, cloud, team, and deep data-workflow features out of
