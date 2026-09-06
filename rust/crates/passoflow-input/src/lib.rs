@@ -556,7 +556,7 @@ fn virtual_key(key: &str) -> Result<u8, InputError> {
         _ => {
             return Err(InputError::Backend(format!(
                 "unsupported Windows key: {key}"
-            )))
+            )));
         }
     };
     Ok(code)

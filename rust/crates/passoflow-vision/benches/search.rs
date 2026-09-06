@@ -2,7 +2,7 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use passoflow_capture::{CapturedFrame, ImageFrame, Origin};
-use passoflow_vision::{search, SearchConfig, Template};
+use passoflow_vision::{SearchConfig, Template, search};
 
 fn main() {
     let frame = CapturedFrame {

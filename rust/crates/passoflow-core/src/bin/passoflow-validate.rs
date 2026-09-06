@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, env, fs, path::Path, process::ExitCode};
 
-use passoflow_core::{Diagnostic, Scenario, Severity, CONTRACT_VERSION};
+use passoflow_core::{CONTRACT_VERSION, Diagnostic, Scenario, Severity};
 use serde::Serialize;
 
 #[derive(Serialize)]

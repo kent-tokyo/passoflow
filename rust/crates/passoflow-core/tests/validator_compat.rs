@@ -18,24 +18,36 @@ const EXPECTED: &str =
 
 #[test]
 fn shared_fixture_matches_expected_validity() {
-    assert!(Scenario::from_yaml(VALID)
-        .expect("valid fixture parses")
-        .is_valid());
-    assert!(!Scenario::from_yaml(UNKNOWN)
-        .expect("unknown fixture parses")
-        .is_valid());
-    assert!(!Scenario::from_yaml(MISSING)
-        .expect("missing fixture parses")
-        .is_valid());
-    assert!(!Scenario::from_yaml(INVALID)
-        .expect("invalid fixture parses")
-        .is_valid());
-    assert!(!Scenario::from_yaml(INVALID_VALUES)
-        .expect("invalid values fixture parses")
-        .is_valid());
-    assert!(!Scenario::from_yaml(INVALID_WEB_VALUES)
-        .expect("invalid web values fixture parses")
-        .is_valid());
+    assert!(
+        Scenario::from_yaml(VALID)
+            .expect("valid fixture parses")
+            .is_valid()
+    );
+    assert!(
+        !Scenario::from_yaml(UNKNOWN)
+            .expect("unknown fixture parses")
+            .is_valid()
+    );
+    assert!(
+        !Scenario::from_yaml(MISSING)
+            .expect("missing fixture parses")
+            .is_valid()
+    );
+    assert!(
+        !Scenario::from_yaml(INVALID)
+            .expect("invalid fixture parses")
+            .is_valid()
+    );
+    assert!(
+        !Scenario::from_yaml(INVALID_VALUES)
+            .expect("invalid values fixture parses")
+            .is_valid()
+    );
+    assert!(
+        !Scenario::from_yaml(INVALID_WEB_VALUES)
+            .expect("invalid web values fixture parses")
+            .is_valid()
+    );
 }
 
 #[test]

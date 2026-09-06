@@ -1,6 +1,6 @@
 //! Python access to PassoFlow's Rust scenario contracts.
 
-use passoflow_core::{Scenario, CONTRACT_VERSION};
+use passoflow_core::{CONTRACT_VERSION, Scenario};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use serde_json::json;

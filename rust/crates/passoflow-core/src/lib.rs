@@ -519,8 +519,8 @@ fn validate_step(step: &Step, number: usize, diagnostics: &mut Vec<Diagnostic>) 
                 "'region' must be a 4-element integer list",
             ));
         } else if let Some(items) = value.as_sequence() {
-            if items[2].as_i64().map_or(true, |width| width <= 0)
-                || items[3].as_i64().map_or(true, |height| height <= 0)
+            if items[2].as_i64().is_none_or(|width| width <= 0)
+                || items[3].as_i64().is_none_or(|height| height <= 0)
             {
                 diagnostics.push(error(
                     "invalid_region_size",
@@ -557,7 +557,7 @@ fn validate_step(step: &Step, number: usize, diagnostics: &mut Vec<Diagnostic>) 
     if let Some(value) = step.params.get("confidence") {
         if value
             .as_f64()
-            .map_or(true, |confidence| !(0.0..=1.0).contains(&confidence))
+            .is_none_or(|confidence| !(0.0..=1.0).contains(&confidence))
         {
             diagnostics.push(error(
                 "invalid_confidence",
@@ -573,7 +573,7 @@ fn validate_step(step: &Step, number: usize, diagnostics: &mut Vec<Diagnostic>) 
         "startup_timeout_ms",
     ] {
         if let Some(value) = step.params.get(name) {
-            if value.as_f64().map_or(true, |number| number < 0.0) {
+            if value.as_f64().is_none_or(|number| number < 0.0) {
                 diagnostics.push(error(
                     "invalid_non_negative_number",
                     &path,
@@ -584,7 +584,7 @@ fn validate_step(step: &Step, number: usize, diagnostics: &mut Vec<Diagnostic>) 
     }
     if step.action == "repeat" {
         if let Some(value) = step.params.get("count") {
-            if value.as_i64().map_or(true, |count| count <= 0) {
+            if value.as_i64().is_none_or(|count| count <= 0) {
                 diagnostics.push(error(
                     "invalid_repeat_count",
                     &path,
@@ -612,7 +612,7 @@ fn validate_step(step: &Step, number: usize, diagnostics: &mut Vec<Diagnostic>) 
         "browser_navigate" | "browser_click" | "browser_fill" | "browser_wait_for"
     ) {
         if let Some(value) = step.params.get("timeout_ms") {
-            if value.as_i64().map_or(true, |timeout| timeout <= 0) {
+            if value.as_i64().is_none_or(|timeout| timeout <= 0) {
                 diagnostics.push(error(
                     "invalid_timeout",
                     &path,
@@ -823,7 +823,7 @@ fn validate_if_blocks(steps: &[Step], diagnostics: &mut Vec<Diagnostic>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ActionOutcome, ActionResult, RunEvent, Scenario, Severity, CONTRACT_VERSION};
+    use super::{ActionOutcome, ActionResult, CONTRACT_VERSION, RunEvent, Scenario, Severity};
     use serde_yaml::Value;
 
     #[test]

@@ -7,8 +7,8 @@
 #![forbid(unsafe_code)]
 
 use passoflow_core::{
-    ActionOutcome, ActionResult, ExecutionPlan, PlannedStep, RetryPolicy, RunEvent,
-    CONTRACT_VERSION,
+    ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
+    RunEvent,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -162,9 +162,9 @@ fn event(run_id: &str, step: &PlannedStep, result: &ActionResult, attempt: u32) 
 
 #[cfg(test)]
 mod tests {
-    use super::{run, ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor};
+    use super::{ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run};
     use passoflow_core::{
-        ActionOutcome, ActionResult, ExecutionPlan, PlannedStep, RetryPolicy, CONTRACT_VERSION,
+        ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
     };
 
     struct FakeExecutor {

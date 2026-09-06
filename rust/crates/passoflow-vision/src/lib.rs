@@ -1059,11 +1059,11 @@ fn confidence_at(frame: &ImageFrame, template: &ImageFrame, left: usize, top: us
 #[cfg(test)]
 mod tests {
     use super::{
+        ActiveWindow, ClickDecision, ClickOptions, FileTemplateLoader, ImageStepExecutor,
+        MatchCandidate, MatchDecision, MatchLocation, MatchPoint, MatchPosition, RegionOrigin,
+        SearchConfig, SearchOptions, Template, TemplateLoader, VisionError, WindowContextProvider,
         capture_and_click, capture_and_move, click_match_guarded, ensure_target_window,
-        resolve_search_region, round_half_even, search, ActiveWindow, ClickDecision, ClickOptions,
-        FileTemplateLoader, ImageStepExecutor, MatchCandidate, MatchDecision, MatchLocation,
-        MatchPoint, MatchPosition, RegionOrigin, SearchConfig, SearchOptions, Template,
-        TemplateLoader, VisionError, WindowContextProvider,
+        resolve_search_region, round_half_even, search,
     };
     use passoflow_capture::{
         CaptureBackend, CaptureError, CaptureRegion, CapturedFrame, ImageFrame, Origin,
