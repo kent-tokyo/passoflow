@@ -96,8 +96,6 @@ Browser automation has two explicit modes: use `open_url` followed by `activate_
 
 The Rust validator is currently opt-in. Build it with `cargo build --manifest-path rust/Cargo.toml --bin passoflow-validate`, set `PASSOFLOW_VALIDATE_BIN` to the resulting binary, and set `PASSOFLOW_USE_RUST_VALIDATOR=1` for a local runner trial. Without both settings, PassoFlow continues to use the Python validator. Use `passoflow-validate --plan <scenario.yaml>` to inspect the Rust execution plan.
 
-On Windows, double-click `run_webapp.bat`; it installs missing dependencies, starts the local services, waits for readiness, and opens the browser. On macOS, double-click `run_webapp.command` when the backend dependencies are available.
-
 To launch manually:
 
 ```

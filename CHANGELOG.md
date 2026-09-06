@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Adopted Rust Edition 2024 with Rust 1.88 as the minimum supported toolchain.
-- Fixed CI Python dependency setup and Rust Clippy coverage, including the Windows native adapter.
+- Updated CI Python dependency setup and Rust Clippy coverage, including the Windows native adapter.
 
 ## [0.1.2] - 2026-09-06
 
