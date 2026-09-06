@@ -91,6 +91,9 @@ The same concepts are exposed by `passoflow-core` as
 - `ExecutionPlan::resolve_variables` provides non-mutating, recursive
   `{{variable}}` expansion for native executors. Unset variables resolve to an
   empty string for compatibility with the Python runner.
+- `run_with_runtime_snapshot` applies that resolution inside the engine before
+  branch selection and action dispatch, so one snapshot governs both decisions
+  and parameters.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.

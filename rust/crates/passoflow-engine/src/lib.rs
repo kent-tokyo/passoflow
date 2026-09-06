@@ -210,9 +210,10 @@ where
     S: RetrySleeper,
     F: FnMut() -> bool,
 {
-    let decisions = plan.branch_decisions(variables, last_step)?;
+    let resolved_plan = plan.resolve_variables(variables);
+    let decisions = resolved_plan.branch_decisions(variables, last_step)?;
     run_selected_with_tables(
-        plan,
+        &resolved_plan,
         &decisions,
         tables,
         executor,
@@ -551,5 +552,46 @@ mod tests {
         assert_eq!(report.events.len(), 1);
         assert_eq!(report.events[0].step, 4);
         assert_eq!(executor.calls, 1);
+    }
+
+    #[test]
+    fn runtime_snapshot_facade_resolves_action_parameters_inside_engine() {
+        struct InspectingExecutor {
+            text: Option<String>,
+        }
+        impl StepExecutor for InspectingExecutor {
+            fn execute(&mut self, step: &PlannedStep) -> Result<ActionResult, super::EngineError> {
+                self.text = step
+                    .params
+                    .get("text")
+                    .and_then(|value| value.as_str())
+                    .map(str::to_owned);
+                Ok(result(ActionOutcome::Success, "typed"))
+            }
+        }
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: type_text\n    text: 'Hello {{ name }}'\n",
+        )
+        .expect("scenario should parse");
+        let mut executor = InspectingExecutor { text: None };
+        let mut sleeper = NoopSleeper;
+        let report = run_with_runtime_snapshot(
+            &scenario.execution_plan(),
+            &BTreeMap::from([(String::from("name"), String::from("Ada"))]),
+            passoflow_core::LastStepState::None,
+            &BTreeMap::new(),
+            &mut executor,
+            &mut sleeper,
+            "run-resolved",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("resolved run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(executor.text.as_deref(), Some("Hello Ada"));
     }
 }

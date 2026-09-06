@@ -74,6 +74,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Rust selectorで実行時table行を受け取り、展開したloop iteration間の行変数を分離する。
 - [x] `passoflow-engine::run_selected_with_tables`を公開し、解決済みtable loop stepを共通のretry・停止・event処理で実行できるようにする。
 - [x] engine実行前に変数と`last_step`から分岐判定を生成するruntime snapshot facadeを追加する。
+- [x] action parameterをdispatchする前に、runtime snapshotの変数をRust engine内で解決する。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
