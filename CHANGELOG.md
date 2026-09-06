@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added Rust-compatible runtime branch-condition evaluation for variables and `last_step`.
 - Added isolated runtime table-row expansion for Rust execution-plan loops.
 - Added the engine API for executing resolved table-loop steps with shared outcomes.
+- Added a runtime-snapshot facade for deriving Rust engine branch decisions.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed

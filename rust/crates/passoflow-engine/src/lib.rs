@@ -9,8 +9,8 @@
 use std::collections::BTreeMap;
 
 use passoflow_core::{
-    ActionOutcome, ActionResult, CONTRACT_VERSION, ControlFlowError, ExecutionPlan, PlannedStep,
-    RetryPolicy, RunEvent,
+    ActionOutcome, ActionResult, CONTRACT_VERSION, ControlFlowError, ExecutionPlan, LastStepState,
+    PlannedStep, RetryPolicy, RunEvent,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -182,6 +182,47 @@ where
     )
 }
 
+/// Evaluate branch conditions from one runtime snapshot and execute the plan.
+///
+/// This facade combines [`ExecutionPlan::branch_decisions`] with
+/// [`run_selected_with_tables`]. The snapshot is intentionally immutable for
+/// the duration of the run; conditions that depend on intermediate action
+/// results belong to the future step-by-step runtime integration.
+///
+/// # Errors
+///
+/// Returns an error when condition evaluation, loop selection, contract
+/// validation, or an adapter operation fails.
+#[allow(clippy::too_many_arguments)]
+pub fn run_with_runtime_snapshot<E, S, F>(
+    plan: &ExecutionPlan,
+    variables: &BTreeMap<String, String>,
+    last_step: LastStepState,
+    tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: StepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    let decisions = plan.branch_decisions(variables, last_step)?;
+    run_selected_with_tables(
+        plan,
+        &decisions,
+        tables,
+        executor,
+        sleeper,
+        run_id,
+        retry_policy,
+        stop_requested,
+    )
+}
+
 fn run_steps<E, S, F>(
     steps: &[PlannedStep],
     contract: &str,
@@ -272,7 +313,7 @@ mod tests {
 
     use super::{
         ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run, run_selected,
-        run_selected_with_tables,
+        run_selected_with_tables, run_with_runtime_snapshot,
     };
     use passoflow_core::{
         ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
@@ -477,5 +518,38 @@ mod tests {
         assert_eq!(report.status, ExecutionStatus::Success);
         assert_eq!(report.events.len(), 2);
         assert_eq!(executor.calls, 2);
+    }
+
+    #[test]
+    fn runtime_snapshot_facade_evaluates_conditions_before_execution() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: if\n    variable: ready\n  - action: noop\n  - action: else\n  - action: wait\n    ms: 2\n  - action: endif\n",
+        )
+        .expect("scenario should parse");
+        let mut executor = FakeExecutor {
+            results: vec![result(ActionOutcome::Success, "waited")],
+            calls: 0,
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_with_runtime_snapshot(
+            &scenario.execution_plan(),
+            &BTreeMap::new(),
+            passoflow_core::LastStepState::None,
+            &BTreeMap::new(),
+            &mut executor,
+            &mut sleeper,
+            "run-snapshot",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("snapshot run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(report.events.len(), 1);
+        assert_eq!(report.events[0].step, 4);
+        assert_eq!(executor.calls, 1);
     }
 }

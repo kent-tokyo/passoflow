@@ -280,6 +280,30 @@ fn scalar_string(value: &Value) -> String {
 }
 
 impl ExecutionPlan {
+    /// Evaluate every `if` step against one runtime-state snapshot.
+    ///
+    /// This is useful for previews and callers that already own a stable
+    /// snapshot. Conditions that change after an action require the engine's
+    /// future step-by-step runtime integration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when an `if` step has an unsupported condition shape.
+    pub fn branch_decisions(
+        &self,
+        variables: &BTreeMap<String, String>,
+        last_step: LastStepState,
+    ) -> Result<BTreeMap<u32, bool>, ControlFlowError> {
+        self.steps
+            .iter()
+            .filter(|step| step.action == "if")
+            .map(|step| {
+                evaluate_branch_condition(step, variables, last_step)
+                    .map(|decision| (step.index, decision))
+            })
+            .collect()
+    }
+
     /// Select executable steps using caller-provided decisions for each `if`.
     ///
     /// Structural markers are omitted, fixed-count loops are expanded, and
@@ -1507,6 +1531,11 @@ mod tests {
         assert!(
             !evaluate_branch_condition(&plan.steps[2], &variables, LastStepState::Ok,)
                 .expect("last-step condition should evaluate")
+        );
+        assert_eq!(
+            plan.branch_decisions(&variables, LastStepState::Warned)
+                .expect("branch decisions should evaluate"),
+            BTreeMap::from([(1, true), (2, true), (3, true)])
         );
     }
 

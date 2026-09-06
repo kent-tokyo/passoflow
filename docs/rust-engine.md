@@ -101,6 +101,9 @@ The same concepts are exposed by `passoflow-core` as
   expands loop bodies with isolated row variables; missing rows fail closed.
 - `passoflow-engine::run_selected_with_tables` sends those resolved steps
   through the shared retry, stop, and versioned-event path.
+- `passoflow-engine::run_with_runtime_snapshot` derives branch decisions from a
+  single variables/`last_step` snapshot before execution; mutable conditions
+  between actions remain an open integration gate.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.
