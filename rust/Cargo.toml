@@ -5,6 +5,7 @@ members = [
     "crates/passoflow-input",
     "crates/passoflow-capture",
     "crates/passoflow-vision",
+    "crates/passoflow-web",
     "crates/passoflow-engine",
     "crates/passoflow-python",
 ]

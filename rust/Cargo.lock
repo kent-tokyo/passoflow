@@ -233,6 +233,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "passoflow-web"
+version = "0.1.2"
+dependencies = [
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

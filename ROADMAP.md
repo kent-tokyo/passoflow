@@ -116,6 +116,7 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 ### Phase 5 — Rust DOM and unified engine
 
 - [x] Implement the initial platform-independent `passoflow-engine` runner with retries, warning continuation, failure stop, stop requests, and versioned step-attempt events.
+- [x] Define a platform-independent DOM action boundary with selector/URL/timeout safety checks and a recording backend.
 - [ ] Select and prototype a Rust Chromium adapter using CDP or a maintained Playwright-compatible client.
 - [ ] Port navigation, click, fill, wait, selector preview, and selector recovery diagnostics.
 - [x] Implement the initial `passoflow-engine` execution boundary with retries, safety stop semantics, and structured events.

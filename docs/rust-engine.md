@@ -25,7 +25,8 @@ compatibility baseline until each phase passes its gate.
 | `passoflow-capture` | RGBA frames, regions, cropping, Windows GDI capture and diagnostics | Windows initial adapter implemented |
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
 | `passoflow-python` | PyO3 binding for validation, normalization, and plans | Binding plus type stub/example; wheel not yet republished |
-| `passoflow-web` / `passoflow-server` | Future Rust DOM adapter and local API | Planned |
+| `passoflow-web` | DOM operation contract and recording backend | Initial boundary implemented |
+| `passoflow-server` | Future Rust local API compatible with the React editor | Planned |
 
 ## Replaced capability boundary
 
@@ -83,6 +84,9 @@ The same concepts are exposed by `passoflow-core` as
 - The initial Rust image executor covers `click_image` and
   `move_mouse_to_image`; the existing Python runner still executes the full
   action set.
+- `passoflow-web` validates `http`/`https` navigation, non-empty CSS
+  selectors, and positive wait timeouts before dispatch. Its recording backend
+  provides deterministic dry-run evidence; it does not open a browser yet.
 
 ## Verification
 
@@ -101,7 +105,8 @@ input to the operating system.
 
 ## Open gates
 
-The remaining migration work is the Rust DOM/Chromium adapter, moving variable
+The remaining migration work is selecting and prototyping the Rust DOM/Chromium
+adapter on top of `passoflow-web`, moving variable
 and control-flow execution behind the Rust engine, a local Rust-compatible API,
 Python type stubs and platform wheels, runtime permission guidance, and
 published-crate/PyPI installation verification. See the [roadmap](../ROADMAP.md)
