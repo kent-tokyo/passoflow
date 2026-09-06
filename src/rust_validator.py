@@ -162,6 +162,29 @@ def assert_plan_matches_steps(plan: dict[str, Any], steps: list[dict[str, Any]])
             raise RuntimeError(f"Rust execution plan does not match loaded step {index}")
 
 
+def steps_from_rust_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """Materialize Python-compatible steps from Rust's normalized plan parameters.
+
+    This keeps the existing Python action dispatch intact while making the Rust
+    plan the opt-in source of normalized action values. Structural validation
+    and runtime control flow remain separate until the native engine owns them.
+    """
+    materialized: list[dict[str, Any]] = []
+    for expected_index, planned in enumerate(plan["steps"], start=1):
+        if (
+            not isinstance(planned, dict)
+            or planned.get("index") != expected_index
+            or not isinstance(planned.get("action"), str)
+            or not isinstance(planned.get("params", {}), dict)
+        ):
+            raise ValueError("Rust planner returned a malformed execution step")
+        params = dict(planned["params"])
+        if "action" in params:
+            raise ValueError("Rust planner returned an action parameter named 'action'")
+        materialized.append({"action": planned["action"], **params})
+    return materialized
+
+
 def compare_with_python(
     python_errors: list[str], python_warnings: list[str], rust_report: RustValidationReport
 ) -> dict[str, Any]:

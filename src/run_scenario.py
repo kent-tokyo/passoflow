@@ -50,7 +50,13 @@ from web_actions import (
     close_browser,
     open_url,
 )
-from rust_validator import assert_plan_matches_steps, normalize_with_rust, plan_with_rust, validate_with_rust
+from rust_validator import (
+    assert_plan_matches_steps,
+    normalize_with_rust,
+    plan_with_rust,
+    steps_from_rust_plan,
+    validate_with_rust,
+)
 from screen_actions import (
     CONFIDENCE,
     POSITION,
@@ -1039,6 +1045,7 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
         plan = plan_with_rust(yaml_path)
         if plan is not None:
             assert_plan_matches_steps(plan, all_steps)
+            all_steps = steps_from_rust_plan(plan)
     start_idx = (start - 1) if start else 0
     end_idx = end if end else len(all_steps)
     steps = all_steps[start_idx:end_idx]

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added isolated runtime table-row expansion for Rust execution-plan loops.
 - Added the engine API for executing resolved table-loop steps with shared outcomes.
 - Added a runtime-snapshot facade for deriving Rust engine branch decisions.
+- The opt-in Python bridge now dispatches normalized action parameters from the Rust plan after a strict step-alignment check.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed

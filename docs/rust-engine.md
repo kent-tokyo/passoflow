@@ -75,6 +75,10 @@ The same concepts are exposed by `passoflow-core` as
 - The opt-in Python bridge uses `PASSOFLOW_USE_RUST_VALIDATOR=1` and
   `PASSOFLOW_VALIDATE_BIN`. Without both settings, the Python validator remains
   the default.
+- When both settings are enabled, the runner also dispatches normalized action
+  parameters from the Rust plan after strict step alignment. Python action
+  functions remain the runtime adapter; variable mutation and dynamic control
+  flow are not delegated yet.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.

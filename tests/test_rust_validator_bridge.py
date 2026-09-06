@@ -15,6 +15,7 @@ from rust_validator import (
     compare_with_python,
     normalize_with_rust,
     plan_with_rust,
+    steps_from_rust_plan,
     validate_with_rust,
 )
 
@@ -109,6 +110,32 @@ class RustValidatorBridgeTests(unittest.TestCase):
             assert_plan_matches_steps(plan, [{"action": "wait"}, {"action": "end"}])
         with self.assertRaisesRegex(RuntimeError, "step 1"):
             assert_plan_matches_steps(plan, [{"action": "click_image"}])
+
+    def test_materializes_python_steps_from_normalized_rust_parameters(self):
+        plan = {
+            "contract": "0.1",
+            "steps": [
+                {"index": 1, "action": "browser_fill", "params": {"selector": "#name", "text": "Ada"}},
+                {"index": 2, "action": "wait", "params": {"ms": 5}},
+            ],
+        }
+
+        self.assertEqual(
+            steps_from_rust_plan(plan),
+            [
+                {"action": "browser_fill", "selector": "#name", "text": "Ada"},
+                {"action": "wait", "ms": 5},
+            ],
+        )
+
+    def test_materialized_plan_rejects_malformed_steps(self):
+        with self.assertRaisesRegex(ValueError, "malformed"):
+            steps_from_rust_plan({"contract": "0.1", "steps": [{"index": 2, "action": "wait"}]})
+
+        with self.assertRaisesRegex(ValueError, "action parameter"):
+            steps_from_rust_plan(
+                {"contract": "0.1", "steps": [{"index": 1, "action": "wait", "params": {"action": "bad"}}]}
+            )
 
     def test_compatibility_gate_reports_validity_mismatch(self):
         report = RustValidationReport(True, 0, 0, ())

@@ -74,6 +74,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Accept runtime table rows in the Rust selector and isolate row variables across expanded loop iterations.
 - [x] Expose `passoflow-engine::run_selected_with_tables` so resolved table-loop steps use shared retry, stop, and event handling.
 - [x] Add a runtime-snapshot facade that derives branch decisions from variables and `last_step` before engine execution.
+- [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 
