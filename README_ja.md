@@ -28,8 +28,9 @@ Rust移行の段階と、PyAutoGUIに依存しないPassoFlow独自実装の境�
 PassoFlow は、Windows上の個人の作業を画面から自動化するツールです。シナリオを作るために、最初からYAMLを編集する必要はありません。
 
 1. `pip install -r requirements.txt` でPythonの依存関係をインストールします。
-2. Windowsで `run_webapp.bat` を起動します。
-3. エディターで既存のシナリオを開くか、新しいシナリオを作成します。
+2. `web-ui`で `npm ci` を実行します（ソースコードから使う場合のみ）。
+3. Windowsで `run_webapp.bat` をダブルクリックします。起動完了後にブラウザが自動で開きます。
+4. エディターで既存のシナリオを開くか、新しいシナリオを作成します。
 4. 左のアクションをクリックするか、キャンバスへドラッグします。
 5. 右のパネルで必須値を入力し、「保存」を選んでから「実行」を押します。
 
@@ -75,7 +76,7 @@ python src\run_scenario.py scenarios\my_scenario.yaml
 
 ## Web UI (シナリオエディタ)
 
-ブラウザで動くビジュアルエディタ(`web-ui/`、React + Viteアプリ)。バックエンドは`src/api_server.py`(FastAPI)。シナリオ編集、画像のキャプチャ・切り抜き、テーブルの取り込み・プレビュー、ループ、条件分岐、Undo/Redo、実行ログに対応している。テーブル取り込み時は実行用の内部`load_table`ステップを自動作成または更新するが、キャンバスには表示しない。Windowsでは`run_webapp.bat`、macOSではPythonバックエンドの依存関係が利用できる場合に`run_webapp.command`をダブルクリックすると起動できる。ただし、Win32やExcel COMを使うアクションを含むため、RPA実行環境はWindows向けであり、macOS用スクリプトだけでクロスプラットフォーム対応になるわけではない。詳しくは [Web UI開発ガイド](web-ui/README.md) を参照する。手動で起動する場合は:
+ブラウザで動くビジュアルエディタ(`web-ui/`、React + Viteアプリ)。バックエンドは`src/api_server.py`(FastAPI)。シナリオ編集、画像のキャプチャ・切り抜き、テーブルの取り込み・プレビュー、ループ、条件分岐、Undo/Redo、実行ログに対応している。テーブル取り込み時は実行用の内部`load_table`ステップを自動作成または更新するが、キャンバスには表示しない。Windowsでは`run_webapp.bat`をダブルクリックするだけで、必要なサービスを起動してブラウザを開ける。`web-ui/dist`がある配布版はFastAPIだけを起動し、ソース checkout ではFastAPIとViteを起動する。macOSではPythonバックエンドの依存関係が利用できる場合に`run_webapp.command`をダブルクリックすると起動できる。ただし、Win32やExcel COMを使うアクションを含むため、RPA実行環境はWindows向けであり、macOS用スクリプトだけでクロスプラットフォーム対応になるわけではない。詳しくは [Web UI開発ガイド](web-ui/README.md) を参照する。手動で起動する場合は:
 
 ブラウザ操作は2方式から選べる。画面認識方式は`open_url`の後に`activate_window`と`click_image`/`type_text`を使い、既定ブラウザを画面として操作する。DOM方式は`browser_navigate`、`browser_click`、`browser_fill`、`browser_wait_for`を使い、別のPlaywright管理ブラウザをCSSセレクタで操作する。
 

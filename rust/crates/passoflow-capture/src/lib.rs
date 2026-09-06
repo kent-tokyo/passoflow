@@ -277,8 +277,16 @@ impl WindowsCapture {
             bounds: CaptureRegion {
                 left,
                 top,
-                width: width as u32,
-                height: height as u32,
+                width: u32::try_from(width).map_err(|_| {
+                    CaptureError::Native(
+                        "GetSystemMetrics returned an invalid virtual desktop width".to_owned(),
+                    )
+                })?,
+                height: u32::try_from(height).map_err(|_| {
+                    CaptureError::Native(
+                        "GetSystemMetrics returned an invalid virtual desktop height".to_owned(),
+                    )
+                })?,
             },
         })
     }
@@ -448,6 +456,10 @@ impl CaptureBackend for WindowsCapture {
 
 #[cfg(windows)]
 fn capture_gdi(left: i32, top: i32, width: u32, height: u32) -> Result<ImageFrame, CaptureError> {
+    let width_i32 = i32::try_from(width)
+        .map_err(|_| CaptureError::Native("Capture width exceeds Win32 limits".to_owned()))?;
+    let height_i32 = i32::try_from(height)
+        .map_err(|_| CaptureError::Native("Capture height exceeds Win32 limits".to_owned()))?;
     let screen = unsafe { get_dc(0) };
     if screen == 0 {
         return Err(CaptureError::Native("GetDC failed".to_owned()));
@@ -457,7 +469,7 @@ fn capture_gdi(left: i32, top: i32, width: u32, height: u32) -> Result<ImageFram
         unsafe { release_dc(0, screen) };
         return Err(CaptureError::Native("CreateCompatibleDC failed".to_owned()));
     }
-    let bitmap = unsafe { create_compatible_bitmap(screen, width as i32, height as i32) };
+    let bitmap = unsafe { create_compatible_bitmap(screen, width_i32, height_i32) };
     if bitmap == 0 {
         unsafe {
             delete_dc(memory);
@@ -490,15 +502,7 @@ fn capture_gdi_bitmap(
 ) -> Result<ImageFrame, CaptureError> {
     if unsafe {
         bit_blt(
-            memory,
-            0,
-            0,
-            width as i32,
-            height as i32,
-            screen,
-            left,
-            top,
-            SRCCOPY,
+            memory, 0, 0, width_i32, height_i32, screen, left, top, SRCCOPY,
         )
     } == 0
     {
@@ -506,9 +510,10 @@ fn capture_gdi_bitmap(
     }
     let mut info = BitmapInfo {
         header: BitmapInfoHeader {
-            size: std::mem::size_of::<BitmapInfoHeader>() as u32,
-            width: width as i32,
-            height: -(height as i32),
+            size: u32::try_from(std::mem::size_of::<BitmapInfoHeader>())
+                .expect("BitmapInfoHeader size fits Win32 DWORD"),
+            width: width_i32,
+            height: -height_i32,
             planes: 1,
             bit_count: 32,
             compression: BI_RGB,
@@ -615,7 +620,7 @@ const SM_CXVIRTUALSCREEN: i32 = 78;
 #[cfg(windows)]
 const SM_CYVIRTUALSCREEN: i32 = 79;
 #[cfg(windows)]
-const SRCCOPY: u32 = 0x00CC0020;
+const SRCCOPY: u32 = 0x00CC_0020;
 #[cfg(windows)]
 const BI_RGB: u32 = 0;
 #[cfg(windows)]
@@ -700,7 +705,8 @@ unsafe extern "system" fn enumerate_monitor(
     data: isize,
 ) -> i32 {
     let mut info = MonitorInfoEx {
-        size: std::mem::size_of::<MonitorInfoEx>() as u32,
+        size: u32::try_from(std::mem::size_of::<MonitorInfoEx>())
+            .expect("MonitorInfoEx size fits Win32 DWORD"),
         monitor: MonitorRect::default(),
         work: MonitorRect::default(),
         flags: 0,

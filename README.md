@@ -36,8 +36,9 @@ PassoFlow is for automating a personal Windows workflow from the screen. You
 do not need to edit YAML to create a scenario.
 
 1. Install the Python dependencies with `pip install -r requirements.txt`.
-2. Start `run_webapp.bat` on Windows.
-3. Open an existing scenario or create a new one in the editor.
+2. Run `npm ci` inside `web-ui` when using a source checkout.
+3. Double-click `run_webapp.bat` on Windows. It starts the services and opens the browser when ready.
+4. Open an existing scenario or create a new one in the editor.
 4. Click an action in the left panel, or drag it onto the canvas.
 5. Fill the required values in the right panel, choose Save, and press Run.
 
@@ -89,7 +90,7 @@ every action, parameter, variable, loop, branch, and validation rule.
 
 ## Web UI (scenario editor)
 
-A browser-based visual editor (`web-ui/`, a React + Vite app) backed by `src/api_server.py` (FastAPI). Launch both with `run_webapp.bat` on Windows or double-click `run_webapp.command` on macOS when the Python backend dependencies are available, or follow the [web UI development guide](web-ui/README.md). Importing a table creates or updates an internal `load_table` runtime step that stays hidden from the canvas. The core RPA runtime remains Windows-oriented because the project includes Win32 and Excel COM actions; the macOS launcher does not make those actions cross-platform. The editor supports scenario editing, image capture/cropping, table import and preview, loops, conditional branches, undo/redo, and run logs.
+A browser-based visual editor (`web-ui/`, a React + Vite app) backed by `src/api_server.py` (FastAPI). Double-click `run_webapp.bat` on Windows: it starts the API and Vite in a source checkout, or starts only the API when `web-ui/dist` is present, then opens the browser. On macOS, double-click `run_webapp.command` when the Python backend dependencies are available, or follow the [web UI development guide](web-ui/README.md). Importing a table creates or updates an internal `load_table` runtime step that stays hidden from the canvas. The core RPA runtime remains Windows-oriented because the project includes Win32 and Excel COM actions; the macOS launcher does not make those actions cross-platform. The editor supports scenario editing, image capture/cropping, table import and preview, loops, conditional branches, undo/redo, and run logs.
 
 Browser automation has two explicit modes: use `open_url` followed by `activate_window` and `click_image`/`type_text` to operate the visible default browser by screen image, or use `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` to operate a separate Playwright-controlled browser through CSS selectors.
 

@@ -20,7 +20,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-          components: rustfmt
+          components: rustfmt, clippy
       - run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
       - run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings
       - run: cargo test --manifest-path rust/Cargo.toml --locked
@@ -28,6 +28,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: python -m pip install PyYAML==6.0.3
       - run: PASSOFLOW_VALIDATE_BIN="$PWD/rust/target/debug/passoflow-validate" python -m unittest tests/test_rust_validator_bridge.py
 
   rust-windows:
@@ -39,7 +40,7 @@ jobs:
         with:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
-          components: rustfmt
+          components: rustfmt, clippy
       - run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
       - run: cargo check --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target x86_64-pc-windows-msvc
       - run: cargo test --manifest-path rust/Cargo.toml --locked
@@ -53,6 +54,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: python -m pip install PyYAML==6.0.3
       - run: python -m compileall -q src tests
       - run: python -m unittest tests/test_rust_validator_bridge.py tests/test_validator_compatibility.py tests/test_rust_runner_opt_in.py tests/test_run_scenario_outcomes.py
 

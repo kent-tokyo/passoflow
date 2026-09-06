@@ -31,6 +31,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 画面画像方式とDOM方式を分離したブラウザ操作。
 - [x] 画像候補、信頼度、リトライ、オフセット、region、対象ウィンドウ確認、セレクタ支援、失敗証跡。
 - [x] 初回成功、セットアップ、実行、復旧時間のローカル限定計測。
+- [x] Windowsでbatをダブルクリックするだけでローカルサービスを起動し、準備完了後にブラウザを開くランチャー。
 - [x] 英語・日本語・中国語のUI文字列。
 
 ## 段階的な実装計画
@@ -132,6 +133,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] PyO3/maturinの初期`passoflow-python` bindingを作り、正規化YAML、診断、execution plan、契約エラーを公開する。
 - [ ] Python型stubとRust/Pythonで同じ動作をする例を用意する。
 - [ ] coreと安定したengineインターフェースをcrates.ioへ公開する。
+- [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
 - [x] `release.yml` / `pypi` environmentを使う`passoflow`向けGitHub Actions Trusted Publisher登録を完了する。
 - [ ] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。

@@ -31,6 +31,7 @@ All public layers share typed concepts: `Scenario`, `Step`, `Action`, `Diagnosti
 - [x] Separate visual-browser and DOM-browser actions.
 - [x] Image candidates, confidence, retry, offsets, regions, target-window safety, selector preview, and failure evidence.
 - [x] Local-only first-success, setup, run, and recovery timing instrumentation.
+- [x] Provide a Windows one-click launcher that starts the local services and opens the browser when ready.
 - [x] English, Japanese, and Chinese UI strings.
 
 ## Phased plan
@@ -132,6 +133,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Build the initial `passoflow-python` PyO3/maturin binding, exposing normalized YAML, diagnostics, execution plans, and contract errors.
 - [ ] Generate Python type stubs and provide Rust/Python examples with identical behavior.
 - [ ] Publish reusable core and stable engine interfaces to crates.io.
+- [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
 - [x] Register the `passoflow` GitHub Actions Trusted Publisher configuration for the `release.yml` / `pypi` environment.
 - [ ] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.

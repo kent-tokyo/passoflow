@@ -281,8 +281,8 @@ impl WindowsInput {
                 bounds: Rect {
                     left,
                     top,
-                    width: width as u32,
-                    height: height as u32,
+                    width: u32::try_from(width).unwrap_or(0),
+                    height: u32::try_from(height).unwrap_or(0),
                 },
                 scale_factor: ScaleFactor {
                     numerator: 1,
@@ -336,7 +336,8 @@ impl WindowsInput {
             return Err(Self::native_error("GetWindowRect"));
         }
         let mut title = [0u16; 512];
-        let length = unsafe { get_window_text(window, title.as_mut_ptr(), title.len() as i32) };
+        let title_capacity = i32::try_from(title.len()).unwrap_or(i32::MAX);
+        let length = unsafe { get_window_text(window, title.as_mut_ptr(), title_capacity) };
         let title = String::from_utf16_lossy(&title[..usize::try_from(length).unwrap_or(0)]);
         Ok(ActiveWindowInfo {
             title,
@@ -393,7 +394,13 @@ impl InputBackend for WindowsInput {
                 }
             }
             InputEvent::Scroll { delta_y, .. } => unsafe {
-                mouse_event(MOUSEEVENTF_WHEEL, 0, 0, *delta_y as u32, 0);
+                mouse_event(
+                    MOUSEEVENTF_WHEEL,
+                    0,
+                    0,
+                    u32::from_ne_bytes(delta_y.to_ne_bytes()),
+                    0,
+                );
             },
             InputEvent::PressKey { key } => press_named_key(key)?,
             InputEvent::Hotkey { keys } => {
@@ -506,12 +513,13 @@ fn send_unicode_unit(unit: u16) -> Result<(), InputError> {
     ];
     let sent = unsafe {
         send_input(
-            inputs.len() as u32,
+            u32::try_from(inputs.len()).expect("Unicode input count fits Win32 UINT"),
             inputs.as_mut_ptr(),
-            std::mem::size_of::<NativeInput>() as i32,
+            i32::try_from(std::mem::size_of::<NativeInput>())
+                .expect("NativeInput size fits Win32 INT"),
         )
     };
-    if sent != inputs.len() as u32 {
+    if sent != u32::try_from(inputs.len()).expect("Unicode input count fits Win32 UINT") {
         return Err(WindowsInput::native_error("SendInput (Unicode)"));
     }
     Ok(())
