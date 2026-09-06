@@ -294,6 +294,23 @@ impl ExecutionPlan {
         &self,
         branch_decisions: &BTreeMap<u32, bool>,
     ) -> Result<Vec<SelectedStep>, ControlFlowError> {
+        self.select_steps_with_tables(branch_decisions, &BTreeMap::new())
+    }
+
+    /// Select steps while supplying rows for table-backed loops.
+    ///
+    /// Each row is overlaid as a variable map for its loop body. The original
+    /// plan is not mutated, and resolved parameters are isolated per row.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a branch decision is missing or a table-backed
+    /// loop has no supplied rows.
+    pub fn select_steps_with_tables(
+        &self,
+        branch_decisions: &BTreeMap<u32, bool>,
+        tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
+    ) -> Result<Vec<SelectedStep>, ControlFlowError> {
         let control_flow = self.control_flow();
         let branches: BTreeMap<u32, BranchBoundary> = control_flow
             .branches
@@ -312,6 +329,7 @@ impl ExecutionPlan {
             branch_decisions,
             &branches,
             &loops,
+            tables,
             None,
         )
     }
@@ -395,6 +413,7 @@ impl ExecutionPlan {
     }
 }
 
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn select_range(
     steps: &[PlannedStep],
     start: usize,
@@ -402,6 +421,7 @@ fn select_range(
     branch_decisions: &BTreeMap<u32, bool>,
     branches: &BTreeMap<u32, BranchBoundary>,
     loops: &BTreeMap<u32, LoopBoundary>,
+    tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
     active_loop: Option<&str>,
 ) -> Result<Vec<SelectedStep>, ControlFlowError> {
     let mut selected = Vec::new();
@@ -437,6 +457,7 @@ fn select_range(
                 branch_decisions,
                 branches,
                 loops,
+                tables,
                 active_loop,
             )?);
             index = boundary.endif_step as usize;
@@ -452,6 +473,43 @@ fn select_range(
             let loop_range = loops
                 .get(&current.index)
                 .expect("validated plan must contain a loop boundary");
+            let loop_end = loop_range.end_step as usize;
+            if let Some(table) = loop_range.table.as_deref() {
+                let rows = tables
+                    .get(table)
+                    .ok_or_else(|| ControlFlowError::RuntimeTableLoop {
+                        label: label.to_owned(),
+                        start_step: loop_range.start_step,
+                        end_step: loop_range.end_step,
+                    })?;
+                for (iteration, row) in rows.iter().enumerate() {
+                    let body = select_range(
+                        steps,
+                        index,
+                        loop_end,
+                        branch_decisions,
+                        branches,
+                        loops,
+                        tables,
+                        Some(label),
+                    )?;
+                    selected.extend(body.into_iter().map(|mut selected_step| {
+                        selected_step.step = PlannedStep {
+                            params: selected_step
+                                .step
+                                .params
+                                .iter()
+                                .map(|(key, value)| (key.clone(), resolve_value(value, row)))
+                                .collect(),
+                            ..selected_step.step
+                        };
+                        selected_step.iteration = u32::try_from(iteration + 1).unwrap_or(u32::MAX);
+                        selected_step
+                    }));
+                }
+                index = loop_end;
+                continue;
+            }
             let count = loop_range
                 .count
                 .ok_or_else(|| ControlFlowError::InvalidLoopCount {
@@ -468,14 +526,6 @@ fn select_range(
                     count: loop_range.count,
                 });
             }
-            if loop_range.table.is_some() {
-                return Err(ControlFlowError::RuntimeTableLoop {
-                    label: label.to_owned(),
-                    start_step: loop_range.start_step,
-                    end_step: loop_range.end_step,
-                });
-            }
-            let loop_end = loop_range.end_step as usize;
             for iteration in 1..=count {
                 let body = select_range(
                     steps,
@@ -484,6 +534,7 @@ fn select_range(
                     branch_decisions,
                     branches,
                     loops,
+                    tables,
                     Some(label),
                 )?;
                 selected.extend(body.into_iter().map(|mut selected_step| {
@@ -1456,6 +1507,45 @@ mod tests {
         assert!(
             !evaluate_branch_condition(&plan.steps[2], &variables, LastStepState::Ok,)
                 .expect("last-step condition should evaluate")
+        );
+    }
+
+    #[test]
+    fn expands_table_loop_rows_into_isolated_parameter_values() {
+        let scenario = Scenario::from_yaml(
+            "steps:\n  - action: type_text\n    text: '{{ name }}'\n    loop: people\n    loop_table: rows\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let tables = BTreeMap::from([(
+            "rows".to_owned(),
+            vec![
+                BTreeMap::from([("name".to_owned(), "Ada".to_owned())]),
+                BTreeMap::from([("name".to_owned(), "Grace".to_owned())]),
+            ],
+        )]);
+
+        let selected = plan
+            .select_steps_with_tables(&BTreeMap::new(), &tables)
+            .expect("table selection should succeed");
+        assert_eq!(selected.len(), 2);
+        assert_eq!(selected[0].iteration, 1);
+        assert_eq!(selected[1].iteration, 2);
+        assert_eq!(
+            selected[0].step.params["text"],
+            Value::String("Ada".to_owned())
+        );
+        assert_eq!(
+            selected[1].step.params["text"],
+            Value::String("Grace".to_owned())
+        );
+        assert_eq!(
+            plan.select_steps(&BTreeMap::new()),
+            Err(ControlFlowError::RuntimeTableLoop {
+                label: "people".to_owned(),
+                start_step: 1,
+                end_step: 1,
+            })
         );
     }
 }

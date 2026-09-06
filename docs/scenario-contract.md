@@ -44,6 +44,9 @@ fixed-count loops into an executable step sequence. Table-backed loops return a
 runtime-data error until their rows are supplied by the engine.
 `passoflow-engine::run_selected` executes that selected sequence with the same
 retry, stop, and event contract as the existing linear runner.
+Callers with table data can use `select_steps_with_tables`; each row is applied
+to a loop body's parameters in isolation, and missing table data remains a
+fail-closed error.
 Branch conditions are evaluated by `evaluate_branch_condition`: unset
 variables are empty/false, scalar `equals` comparisons use their text form,
 and `last_step` accepts `ok`, `warned`, and `failed` runtime states.
