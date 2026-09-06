@@ -93,6 +93,8 @@ The same concepts are exposed by `passoflow-core` as
 - `ExecutionPlan::select_steps` applies caller-supplied branch decisions and
   expands fixed-count loops. Table-backed loops remain an explicit runtime-data
   boundary, and missing branch decisions fail closed.
+- `passoflow-engine::run_selected` now executes the selected sequence while
+  preserving the existing retry, stop, and versioned event behavior.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.

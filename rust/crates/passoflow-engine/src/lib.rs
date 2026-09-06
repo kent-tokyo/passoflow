@@ -6,9 +6,11 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeMap;
+
 use passoflow_core::{
-    ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
-    RunEvent,
+    ActionOutcome, ActionResult, CONTRACT_VERSION, ControlFlowError, ExecutionPlan, PlannedStep,
+    RetryPolicy, RunEvent,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -64,6 +66,8 @@ pub enum EngineError {
     UnsupportedContract { actual: String, expected: String },
     #[error("step adapter failed: {0}")]
     Adapter(String),
+    #[error("control-flow selection failed: {0}")]
+    ControlFlow(#[from] ControlFlowError),
 }
 
 /// Execute a validated plan with deterministic retry and stop semantics.
@@ -82,6 +86,72 @@ pub fn run<E, S, F>(
     sleeper: &mut S,
     run_id: impl Into<String>,
     retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: StepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    run_steps(
+        &plan.steps,
+        plan.contract.as_str(),
+        executor,
+        sleeper,
+        run_id,
+        retry_policy,
+        stop_requested,
+    )
+}
+
+/// Select branches and fixed-count loops, then execute the resulting steps.
+///
+/// The caller supplies decisions for each `if` step because condition values
+/// can depend on runtime variables and prior action outcomes. Table-backed
+/// loops are intentionally rejected until a runtime data provider is added.
+/// Retry, stop, and event behavior is identical to [`run`].
+///
+/// # Errors
+///
+/// Returns an error when the plan contract is incompatible, control-flow
+/// selection cannot be completed, or an adapter cannot return a result.
+pub fn run_selected<E, S, F>(
+    plan: &ExecutionPlan,
+    branch_decisions: &BTreeMap<u32, bool>,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: StepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    let selected = plan.select_steps(branch_decisions)?;
+    let steps: Vec<PlannedStep> = selected
+        .into_iter()
+        .map(|selected_step| selected_step.step)
+        .collect();
+    run_steps(
+        &steps,
+        plan.contract.as_str(),
+        executor,
+        sleeper,
+        run_id,
+        retry_policy,
+        stop_requested,
+    )
+}
+
+fn run_steps<E, S, F>(
+    steps: &[PlannedStep],
+    contract: &str,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
     mut stop_requested: F,
 ) -> Result<RunReport, EngineError>
 where
@@ -89,9 +159,9 @@ where
     S: RetrySleeper,
     F: FnMut() -> bool,
 {
-    if plan.contract != CONTRACT_VERSION {
+    if contract != CONTRACT_VERSION {
         return Err(EngineError::UnsupportedContract {
-            actual: plan.contract.clone(),
+            actual: contract.to_owned(),
             expected: CONTRACT_VERSION.to_owned(),
         });
     }
@@ -101,7 +171,7 @@ where
     let mut status = ExecutionStatus::Success;
     let attempts = retry_policy.attempts.max(1);
 
-    for step in &plan.steps {
+    for step in steps {
         if stop_requested() {
             status = ExecutionStatus::Stopped;
             break;
@@ -138,7 +208,6 @@ where
             }
         }
     }
-
     Ok(RunReport {
         run_id,
         status,
@@ -162,7 +231,9 @@ fn event(run_id: &str, step: &PlannedStep, result: &ActionResult, attempt: u32) 
 
 #[cfg(test)]
 mod tests {
-    use super::{ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run};
+    use std::collections::BTreeMap;
+
+    use super::{ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run, run_selected};
     use passoflow_core::{
         ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
     };
@@ -286,5 +357,43 @@ mod tests {
         .expect("run should succeed");
         assert_eq!(report.status, ExecutionStatus::Stopped);
         assert_eq!(executor.calls, 0);
+    }
+
+    #[test]
+    fn run_selected_executes_only_the_chosen_branch_and_fixed_loop() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: if\n    variable: ready\n  - action: noop\n  - action: else\n  - action: wait\n    ms: 2\n  - action: endif\n  - action: noop\n    loop: repeat\n    loop_count: 2\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let mut executor = FakeExecutor {
+            results: vec![
+                result(ActionOutcome::Success, "waited"),
+                result(ActionOutcome::Success, "repeated"),
+                result(ActionOutcome::Success, "repeated"),
+            ],
+            calls: 0,
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_selected(
+            &plan,
+            &BTreeMap::from([(1, false)]),
+            &mut executor,
+            &mut sleeper,
+            "run-selected",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("selected run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(report.events.len(), 3);
+        assert_eq!(executor.calls, 3);
+        assert_eq!(report.events[0].step, 4);
+        assert_eq!(report.events[1].step, 6);
+        assert_eq!(report.events[2].step, 6);
     }
 }

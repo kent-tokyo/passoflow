@@ -69,6 +69,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Add non-mutating Rust-side `{{variable}}` resolution for planned action parameters, including nested YAML values.
 - [x] Expose deterministic branch boundaries and contiguous loop ranges from the Rust execution plan.
 - [x] Add a pure Rust selector that applies branch decisions and expands fixed-count loops while leaving table loops for runtime data.
+- [x] Connect the selector to a compatible `passoflow-engine::run_selected` execution path with shared retry, stop, and event behavior.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 

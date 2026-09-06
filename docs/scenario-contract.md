@@ -42,6 +42,8 @@ invoke platform adapters.
 Given caller-supplied decisions, the Rust core can select one branch and expand
 fixed-count loops into an executable step sequence. Table-backed loops return a
 runtime-data error until their rows are supplied by the engine.
+`passoflow-engine::run_selected` executes that selected sequence with the same
+retry, stop, and event contract as the existing linear runner.
 
 ## Action outcomes
 
