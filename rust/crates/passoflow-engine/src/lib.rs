@@ -97,8 +97,6 @@ pub enum EngineError {
     Adapter(String),
     #[error("control-flow selection failed: {0}")]
     ControlFlow(#[from] ControlFlowError),
-    #[error("dynamic control flow does not support loop steps yet (step {step})")]
-    UnsupportedDynamicLoop { step: u32 },
 }
 
 /// Execute a validated plan with deterministic retry and stop semantics.
@@ -259,16 +257,54 @@ where
 ///
 /// This is the stateful bridge for scenarios whose `if` conditions depend on
 /// earlier actions. Structural markers are handled by the engine and are not
-/// dispatched to the adapter. Loop steps are rejected until their iteration
-/// state can be represented by the same runtime boundary.
+/// dispatched to the adapter. Use [`run_with_runtime_state_and_tables`] when
+/// the plan contains loops.
 ///
 /// # Errors
 ///
 /// Returns an error when the plan contract is incompatible, a branch condition
-/// is invalid, a loop is present, or an adapter operation fails.
+/// is invalid, or an adapter operation fails.
 pub fn run_with_runtime_state<E, S, F>(
     plan: &ExecutionPlan,
     variables: BTreeMap<String, String>,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: RuntimeStepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    run_with_runtime_state_and_tables(
+        plan,
+        variables,
+        &BTreeMap::new(),
+        executor,
+        sleeper,
+        run_id,
+        retry_policy,
+        stop_requested,
+    )
+}
+
+/// Execute runtime-aware branches and loops with caller-provided table rows.
+///
+/// Table-row variables are scoped to one iteration and restored afterward.
+/// Fixed-count and table loops share the same retry, stop, event, and branch
+/// behavior as the non-loop runtime path.
+///
+/// # Errors
+///
+/// Returns an error when the plan contract is incompatible, control-flow
+/// selection is invalid, required table rows are missing, or an adapter fails.
+#[allow(clippy::too_many_arguments)]
+pub fn run_with_runtime_state_and_tables<E, S, F>(
+    plan: &ExecutionPlan,
+    variables: BTreeMap<String, String>,
+    tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
     executor: &mut E,
     sleeper: &mut S,
     run_id: impl Into<String>,
@@ -285,9 +321,6 @@ where
             actual: plan.contract.clone(),
             expected: CONTRACT_VERSION.to_owned(),
         });
-    }
-    if let Some(step) = plan.steps.iter().find(|step| step.loop_label.is_some()) {
-        return Err(EngineError::UnsupportedDynamicLoop { step: step.index });
     }
     let mut report = RunReport {
         run_id: run_id.into(),
@@ -310,11 +343,13 @@ where
         &mut report,
         retry_policy,
         &mut stop_requested,
+        tables,
+        None,
     )?;
     Ok(report)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn run_dynamic_range<E, S, F>(
     plan: &ExecutionPlan,
     start: usize,
@@ -325,6 +360,8 @@ fn run_dynamic_range<E, S, F>(
     report: &mut RunReport,
     retry_policy: RetryPolicy,
     stop_requested: &mut F,
+    tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
+    active_loop: Option<&str>,
 ) -> Result<(), EngineError>
 where
     E: RuntimeStepExecutor,
@@ -336,6 +373,11 @@ where
         .branches
         .into_iter()
         .map(|boundary| (boundary.if_step, boundary))
+        .collect();
+    let loops: BTreeMap<_, _> = boundaries
+        .loops
+        .into_iter()
+        .map(|boundary| (boundary.start_step, boundary))
         .collect();
     let mut index = start;
     while index < end {
@@ -370,6 +412,8 @@ where
                 report,
                 retry_policy,
                 stop_requested,
+                tables,
+                active_loop,
             )?;
             if report.status == ExecutionStatus::Stopped
                 || report.status == ExecutionStatus::FailureStop
@@ -377,6 +421,104 @@ where
                 return Ok(());
             }
             index = boundary.endif_step as usize;
+            continue;
+        }
+        if let Some(label) = step.loop_label.as_deref()
+            && active_loop != Some(label)
+        {
+            let loop_boundary = loops
+                .get(&step.index)
+                .expect("validated plan must contain a loop boundary");
+            let loop_end = loop_boundary.end_step as usize;
+            if let Some(table) = loop_boundary.table.as_deref() {
+                let rows = tables
+                    .get(table)
+                    .ok_or_else(|| ControlFlowError::RuntimeTableLoop {
+                        label: label.to_owned(),
+                        start_step: loop_boundary.start_step,
+                        end_step: loop_boundary.end_step,
+                    })?;
+                let row_keys: std::collections::BTreeSet<_> =
+                    rows.iter().flat_map(|row| row.keys().cloned()).collect();
+                let saved_values: BTreeMap<_, _> = row_keys
+                    .iter()
+                    .filter_map(|key| {
+                        state
+                            .variables
+                            .get(key)
+                            .map(|value| (key.clone(), value.clone()))
+                    })
+                    .collect();
+                for row in rows {
+                    state.variables.extend(row.clone());
+                    run_dynamic_range(
+                        plan,
+                        index,
+                        loop_end,
+                        state,
+                        executor,
+                        sleeper,
+                        report,
+                        retry_policy,
+                        stop_requested,
+                        tables,
+                        Some(label),
+                    )?;
+                    if report.status == ExecutionStatus::Stopped
+                        || report.status == ExecutionStatus::FailureStop
+                    {
+                        return Ok(());
+                    }
+                }
+                for key in row_keys {
+                    if let Some(value) = saved_values.get(&key) {
+                        state.variables.insert(key, value.clone());
+                    } else {
+                        state.variables.remove(&key);
+                    }
+                }
+            } else {
+                let count =
+                    loop_boundary
+                        .count
+                        .ok_or_else(|| ControlFlowError::InvalidLoopCount {
+                            label: label.to_owned(),
+                            count: loop_boundary.count,
+                        })?;
+                let count =
+                    u32::try_from(count).map_err(|_| ControlFlowError::InvalidLoopCount {
+                        label: label.to_owned(),
+                        count: loop_boundary.count,
+                    })?;
+                if count == 0 {
+                    return Err(ControlFlowError::InvalidLoopCount {
+                        label: label.to_owned(),
+                        count: loop_boundary.count,
+                    }
+                    .into());
+                }
+                for _ in 0..count {
+                    run_dynamic_range(
+                        plan,
+                        index,
+                        loop_end,
+                        state,
+                        executor,
+                        sleeper,
+                        report,
+                        retry_policy,
+                        stop_requested,
+                        tables,
+                        Some(label),
+                    )?;
+                    if report.status == ExecutionStatus::Stopped
+                        || report.status == ExecutionStatus::FailureStop
+                    {
+                        return Ok(());
+                    }
+                }
+            }
+            index = loop_end;
             continue;
         }
         if step.action == "else" || step.action == "endif" {
@@ -390,7 +532,16 @@ where
         let attempts = retry_policy.attempts.max(1);
         let mut final_result = None;
         for attempt in 1..=attempts {
-            let runtime_result = executor.execute_runtime(step, state)?;
+            let resolved_step = ExecutionPlan {
+                contract: plan.contract.clone(),
+                steps: vec![step.clone()],
+            }
+            .resolve_variables(&state.variables)
+            .steps
+            .into_iter()
+            .next()
+            .expect("single-step resolution must retain the step");
+            let runtime_result = executor.execute_runtime(&resolved_step, state)?;
             let should_retry =
                 runtime_result.result.outcome == ActionOutcome::FailureStop && attempt < attempts;
             report
@@ -517,7 +668,7 @@ mod tests {
     use super::{
         ExecutionStatus, NoopSleeper, RetrySleeper, RuntimeActionResult, RuntimeState,
         RuntimeStepExecutor, StepExecutor, run, run_selected, run_selected_with_tables,
-        run_with_runtime_snapshot, run_with_runtime_state,
+        run_with_runtime_snapshot, run_with_runtime_state, run_with_runtime_state_and_tables,
     };
     use passoflow_core::{
         ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
@@ -531,6 +682,7 @@ mod tests {
     struct RuntimeFakeExecutor {
         calls: Vec<u32>,
         action_state: Option<RuntimeState>,
+        seen_names: Vec<String>,
     }
 
     impl RuntimeStepExecutor for RuntimeFakeExecutor {
@@ -541,6 +693,9 @@ mod tests {
         ) -> Result<RuntimeActionResult, super::EngineError> {
             self.calls.push(step.index);
             self.action_state = Some(state.clone());
+            if let Some(name) = state.variables.get("name") {
+                self.seen_names.push(name.clone());
+            }
             let variables = if step.action == "set_variable" {
                 BTreeMap::from([(
                     step.params
@@ -843,6 +998,7 @@ mod tests {
         let mut executor = RuntimeFakeExecutor {
             calls: Vec::new(),
             action_state: None,
+            seen_names: Vec::new(),
         };
         let mut sleeper = NoopSleeper;
         let report = run_with_runtime_state(
@@ -870,5 +1026,74 @@ mod tests {
                 .map(String::as_str),
             Some("yes")
         );
+    }
+
+    #[test]
+    fn runtime_state_executes_fixed_loops() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: noop\n    loop: repeat\n    loop_count: 2\n",
+        )
+        .expect("scenario should parse");
+        let mut executor = RuntimeFakeExecutor {
+            calls: Vec::new(),
+            action_state: None,
+            seen_names: Vec::new(),
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_with_runtime_state(
+            &scenario.execution_plan(),
+            BTreeMap::new(),
+            &mut executor,
+            &mut sleeper,
+            "run-fixed-loop",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("fixed loop run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(executor.calls, vec![1, 1]);
+    }
+
+    #[test]
+    fn runtime_state_scopes_table_rows_and_resolves_parameters() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: type_text\n    text: '{{ name }}'\n    loop: people\n    loop_table: rows\n",
+        )
+        .expect("scenario should parse");
+        let tables = BTreeMap::from([(
+            String::from("rows"),
+            vec![
+                BTreeMap::from([(String::from("name"), String::from("Ada"))]),
+                BTreeMap::from([(String::from("name"), String::from("Grace"))]),
+            ],
+        )]);
+        let mut executor = RuntimeFakeExecutor {
+            calls: Vec::new(),
+            action_state: None,
+            seen_names: Vec::new(),
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_with_runtime_state_and_tables(
+            &scenario.execution_plan(),
+            BTreeMap::new(),
+            &tables,
+            &mut executor,
+            &mut sleeper,
+            "run-table-loop",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("table loop run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(executor.calls, vec![1, 1]);
+        assert_eq!(executor.seen_names, vec!["Ada", "Grace"]);
     }
 }
