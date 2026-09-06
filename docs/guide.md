@@ -63,3 +63,4 @@ Choose one mode per browser flow:
 - DOM mode: `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` using CSS selectors in a Playwright-controlled browser.
 
 Install Chromium once with `python -m playwright install chromium` before using DOM mode.
+When the editor opens, the first-use guide checks for the Playwright package and Chromium and shows the missing setup command if needed.

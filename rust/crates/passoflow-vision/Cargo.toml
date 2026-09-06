@@ -1,0 +1,25 @@
+[package]
+name = "passoflow-vision"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "PassoFlow-owned deterministic template image matching"
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["bmp", "jpeg", "png"] }
+passoflow-capture = { path = "../passoflow-capture" }
+passoflow-core = { path = "../passoflow-core" }
+passoflow-engine = { path = "../passoflow-engine" }
+passoflow-input = { path = "../passoflow-input" }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+thiserror = "2"
+
+[[bench]]
+name = "search"
+harness = false

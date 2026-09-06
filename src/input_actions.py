@@ -100,10 +100,30 @@ def clear_input() -> None:
     press_key("delete")
 
 
-def launch_app(path: str, args: list[str] | None = None) -> None:
-    """Launch an application, e.g. notepad.exe, without waiting for it to exit."""
+def launch_app(path: str, args: list[str] | None = None, wait_for_window: str | None = None, startup_timeout_ms: int = 10_000) -> None:
+    """Launch an application and optionally wait for its first matching window."""
     logger.info("Launching: %s %s", path, args or "")
-    subprocess.Popen([path, *(args or [])])
+    try:
+        process = subprocess.Popen([path, *(args or [])])
+    except (OSError, ValueError) as error:
+        logger.error("Could not launch %s: %s", path, error)
+        raise RuntimeError(f"Could not launch application {path!r}: {error}") from error
+
+    if not wait_for_window:
+        return
+
+    deadline = time.monotonic() + max(startup_timeout_ms, 0) / 1000
+    while time.monotonic() <= deadline:
+        if process.poll() is not None:
+            raise RuntimeError(f"Application {path!r} exited during startup with code {process.returncode}")
+        if gw.getWindowsWithTitle(wait_for_window):
+            logger.info("Application ready: window contains %r", wait_for_window)
+            return
+        time.sleep(0.1)
+    raise TimeoutError(
+        f"Application {path!r} did not open a window containing {wait_for_window!r} "
+        f"within {startup_timeout_ms} ms"
+    )
 
 
 def rename_file(path: str, new_name: str) -> None:

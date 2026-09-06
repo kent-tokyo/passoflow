@@ -33,8 +33,10 @@ from pydantic import BaseModel
 
 from app_paths import app_root
 from input_actions import read_table_rows
-from run_scenario import _validate_scenario
-from screen_actions import POSITIONS
+from run_scenario import _validate_scenario, action_outcome_contract
+from rust_validator import compare_with_python, validate_with_rust
+from screen_actions import POSITIONS, REGION_ORIGINS
+from web_actions import dom_browser_setup_status, preview_dom_selector
 
 load_dotenv(app_root() / ".env")  # see .env.example
 
@@ -187,6 +189,12 @@ class TableImportResponse(BaseModel):
     rows: list[dict[str, str]]
 
 
+class DomPreviewRequest(BaseModel):
+    url: str
+    selector: str
+    timeout_ms: int = 10_000
+
+
 # Valid key names for press_key/hotkey, sourced from pyautogui itself so the UI's
 # picker can never drift out of sync with what run_scenario.py actually accepts.
 KEY_OPTIONS = list(pyautogui.KEYBOARD_KEYS)
@@ -290,6 +298,8 @@ ACTION_SCHEMA = [
         "fields": [
             {"name": "path", "type": "string", "required": True},
             {"name": "args", "type": "string[]", "required": False},
+            {"name": "wait_for_window", "type": "string", "required": False},
+            {"name": "startup_timeout_ms", "type": "number", "required": False, "default": 10000},
         ],
     },
     {
@@ -441,6 +451,7 @@ ACTION_SCHEMA = [
                 "options": ["GET", "POST", "PUT", "PATCH", "DELETE"],
             },
             {"name": "payload", "type": "string", "required": False},
+            {"name": "on_error", "type": "string", "required": False, "default": "continue", "kind": "select", "options": ["continue", "stop"]},
         ],
     },
     {
@@ -459,6 +470,8 @@ ACTION_SCHEMA = [
             {"name": "confidence", "type": "number", "required": False, "default": 0.8},
             {"name": "offset", "type": "number[]", "required": False},
             {"name": "region", "type": "number[]", "required": False},
+            {"name": "region_origin", "type": "string", "required": False, "default": "screen", "kind": "select", "options": sorted(REGION_ORIGINS)},
+            {"name": "target_window_title", "type": "string", "required": False},
             {
                 "name": "position",
                 "type": "string",
@@ -480,6 +493,8 @@ ACTION_SCHEMA = [
             {"name": "confidence", "type": "number", "required": False, "default": 0.8},
             {"name": "offset", "type": "number[]", "required": False},
             {"name": "region", "type": "number[]", "required": False},
+            {"name": "region_origin", "type": "string", "required": False, "default": "screen", "kind": "select", "options": sorted(REGION_ORIGINS)},
+            {"name": "target_window_title", "type": "string", "required": False},
             {
                 "name": "position",
                 "type": "string",
@@ -713,6 +728,16 @@ ACTION_PURPOSES: dict[str, dict[str, str]] = {
 # Inline help for parameters that aren't self-explanatory from their name alone, shown as a
 # tooltip in the parameter panel. Keyed "action.field"; only fields that need it are listed.
 FIELD_HINTS: dict[str, dict[str, str]] = {
+    "click_image.images": {
+        "en": "Candidate images are tried from top to bottom. Put the most reliable or common appearance first; the run log records which candidate matched.",
+        "ja": "候補画像は上から順に試します。最も確実または一般的な見た目を上に置くと、実行ログにマッチした候補番号も記録されます。",
+        "zh": "候选图像按从上到下的顺序尝试。将最可靠或最常见的外观放在前面；运行日志会记录匹配的候选编号。",
+    },
+    "move_mouse_to_image.images": {
+        "en": "Candidate images are tried from top to bottom. Put the most reliable or common appearance first; the run log records which candidate matched.",
+        "ja": "候補画像は上から順に試します。最も確実または一般的な見た目を上に置くと、実行ログにマッチした候補番号も記録されます。",
+        "zh": "候选图像按从上到下的顺序尝试。将最可靠或最常见的外观放在前面；运行日志会记录匹配的候选编号。",
+    },
     "open_url.url": {
         "en": "URL to open in the default browser. Use this before click_image when you want visual browser automation.",
         "ja": "既定ブラウザで開くURL。画面を画像認識で操作する場合は、先にこのアクションを使う。",
@@ -853,6 +878,16 @@ FIELD_HINTS: dict[str, dict[str, str]] = {
         "ja": "検索する画面範囲を [left, top, width, height] で指定（任意）。対象ウィンドウやパネルの周辺に絞ると、検索が速くなり誤検出も減る。",
         "zh": "可选的屏幕搜索区域 [left, top, width, height]。限制在目标窗口或面板附近可加快匹配并减少误匹配。",
     },
+    "click_image.region_origin": {
+        "en": "Coordinate origin: screen uses absolute screen pixels; active_window uses pixels from the current foreground window. Leave region empty to search the whole foreground window.",
+        "ja": "座標の基準: screenは画面全体の絶対ピクセル、active_windowは現在の前面ウィンドウ左上からのピクセル。regionを空にすると前面ウィンドウ全体を検索する。",
+        "zh": "坐标基准：screen使用屏幕绝对像素；active_window使用当前前台窗口左上角的像素。留空region可搜索整个前台窗口。",
+    },
+    "click_image.target_window_title": {
+        "en": "Optional safety check: the current foreground window title must contain this text before searching or clicking. The action fails closed if it does not.",
+        "ja": "安全確認（任意）: 画像検索・クリック前に、現在の前面ウィンドウのタイトルにこの文字列が含まれることを確認する。不一致なら安全側に停止する。",
+        "zh": "可选安全检查：搜索或点击前，当前前台窗口标题必须包含此文本。不匹配时动作会安全停止。",
+    },
     "move_mouse_to_image.position": {
         "en": "Named point on the matched image to move the mouse to, instead of the default center. Ignored if offset is set (offset always wins).",
         "ja": "マウスを移動させるマッチ画像上の位置を、デフォルトの中央の代わりに名前で指定する。offsetを指定した場合はそちらが優先され、positionは無視される。",
@@ -862,6 +897,16 @@ FIELD_HINTS: dict[str, dict[str, str]] = {
         "en": "Optional screen rectangle [left, top, width, height] to search. Use it around the target window or panel to speed up matching and reduce false positives.",
         "ja": "検索する画面範囲を [left, top, width, height] で指定（任意）。対象ウィンドウやパネルの周辺に絞ると、検索が速くなり誤検出も減る。",
         "zh": "可选的屏幕搜索区域 [left, top, width, height]。限制在目标窗口或面板附近可加快匹配并减少误匹配。",
+    },
+    "move_mouse_to_image.region_origin": {
+        "en": "Coordinate origin: screen uses absolute screen pixels; active_window uses pixels from the current foreground window. Leave region empty to search the whole foreground window.",
+        "ja": "座標の基準: screenは画面全体の絶対ピクセル、active_windowは現在の前面ウィンドウ左上からのピクセル。regionを空にすると前面ウィンドウ全体を検索する。",
+        "zh": "坐标基准：screen使用屏幕绝对像素；active_window使用当前前台窗口左上角的像素。留空region可搜索整个前台窗口。",
+    },
+    "move_mouse_to_image.target_window_title": {
+        "en": "Optional safety check: the current foreground window title must contain this text before searching or moving the mouse. The action fails closed if it does not.",
+        "ja": "安全確認（任意）: 画像検索・マウス移動前に、現在の前面ウィンドウのタイトルにこの文字列が含まれることを確認する。不一致なら安全側に停止する。",
+        "zh": "可选安全检查：搜索或移动鼠标前，当前前台窗口标题必须包含此文本。不匹配时动作会安全停止。",
     },
     "click_image.retry": {
         "en": "Number of additional attempts if the image isn't found right away. 0 (default) means try once and give up.",
@@ -897,6 +942,21 @@ FIELD_HINTS: dict[str, dict[str, str]] = {
         "en": "Milliseconds to wait between attempts. Only relevant when retry is greater than 0.",
         "ja": "試行間の待機時間（ミリ秒）。retryが1以上の場合のみ意味を持つ。",
         "zh": "重试之间的等待时间（毫秒）。仅当retry大于0时才有意义。",
+    },
+    "launch_app.wait_for_window": {
+        "en": "Optional window-title fragment to wait for after launch. When set, startup failure or timeout stops the scenario instead of silently continuing.",
+        "ja": "起動後に待つウィンドウタイトルの一部（任意）。指定すると、起動失敗やタイムアウトでシナリオを停止します。",
+        "zh": "启动后等待的可选窗口标题片段。设置后，启动失败或超时会停止场景，而不是静默继续。",
+    },
+    "launch_app.startup_timeout_ms": {
+        "en": "Maximum time to wait for wait_for_window, in milliseconds. Used only when a window title is set.",
+        "ja": "wait_for_windowを待つ最大時間（ミリ秒）。ウィンドウタイトルを指定した場合だけ使います。",
+        "zh": "等待wait_for_window的最长时间（毫秒）。仅在设置窗口标题时使用。",
+    },
+    "send_webhook.on_error": {
+        "en": "Choose whether a failed request only warns and continues, or stops the scenario.",
+        "ja": "リクエスト失敗時に警告して継続するか、シナリオを停止するかを選びます。",
+        "zh": "选择请求失败时仅警告并继续，还是停止场景。",
     },
     "get_excel_value.path": {
         "en": "Full path to the .xlsx file to read from, e.g. C:\\data\\report.xlsx. Resolved for {{...}} placeholders.",
@@ -1165,9 +1225,28 @@ def list_actions() -> list[dict[str, Any]]:
                 "fields": fields,
                 "labels": ACTION_LABELS[schema["action"]],
                 "purpose": ACTION_PURPOSES[schema["action"]],
+                "outcomes": action_outcome_contract(schema["action"]),
             }
         )
     return result
+
+
+@app.get("/api/environment")
+def environment_status() -> dict[str, object]:
+    """Report optional local setup needed by DOM browser actions without launching a browser."""
+    return {"dom_browser": dom_browser_setup_status()}
+
+
+@app.post("/api/dom/preview")
+def dom_preview(req: DomPreviewRequest) -> dict[str, object]:
+    """Preview CSS selector matches without touching the scenario's browser session."""
+    try:
+        return preview_dom_selector(req.url, req.selector, req.timeout_ms)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.info("DOM selector preview failed: %s", exc)
+        raise HTTPException(status_code=400, detail=f"DOM preview failed: {exc}") from exc
 
 
 _anthropic_client: Anthropic | None = None
@@ -1832,6 +1911,18 @@ def _classify_run_outcome(returncode: int, stop_requested: bool, warning_lines: 
     return "warning" if warning_lines else "success"
 
 
+def _capture_failure_screenshot(run_id: str) -> Path | None:
+    """Capture the current screen for a failed/stopped run without masking its outcome."""
+    target = app_root() / "logs" / f"run_{run_id}_failure.png"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        pyautogui.screenshot().save(target)
+        return target
+    except Exception as error:
+        logger.warning("Could not capture failure screenshot for run %s: %s", run_id, error)
+        return None
+
+
 @app.get("/api/scenarios/{filename:path}/validate")
 def validate_scenario(filename: str) -> dict[str, list[str]]:
     path = _resolve_scenario_path(filename)
@@ -1839,6 +1930,42 @@ def validate_scenario(filename: str) -> dict[str, list[str]]:
         raise HTTPException(status_code=404, detail="Scenario not found")
     errors, warnings = _validate_scenario(path)
     return {"errors": errors, "warnings": warnings}
+
+
+@app.get("/api/scenarios/{filename:path}/validate-rust")
+def validate_scenario_with_rust(filename: str) -> dict[str, Any]:
+    """Run the opt-in Rust validator without changing the Python baseline."""
+    path = _resolve_scenario_path(filename)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    try:
+        report = validate_with_rust(path)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    if report is None:
+        raise HTTPException(status_code=503, detail="PASSOFLOW_VALIDATE_BIN is not configured")
+    return {
+        "valid": report.valid,
+        "errors": report.messages("error"),
+        "warnings": report.messages("warning"),
+        "diagnostics": list(report.diagnostics),
+    }
+
+
+@app.get("/api/scenarios/{filename:path}/validate-compare")
+def compare_scenario_validation(filename: str) -> dict[str, Any]:
+    """Compare Python and opt-in Rust validation before changing the default."""
+    path = _resolve_scenario_path(filename)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    try:
+        report = validate_with_rust(path)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    if report is None:
+        raise HTTPException(status_code=503, detail="PASSOFLOW_VALIDATE_BIN is not configured")
+    python_errors, python_warnings = _validate_scenario(path)
+    return compare_with_python(python_errors, python_warnings, report)
 
 
 @app.post("/api/scenarios/{filename:path}/run")
@@ -1927,6 +2054,7 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
         cmd += ["--start", str(run_info["start"])]
     if run_info["end"] is not None:
         cmd += ["--end", str(run_info["end"])]
+    cmd += ["--run-id", run_id]
 
     process = await asyncio.create_subprocess_exec(
         *cmd,
@@ -1944,6 +2072,7 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
             progress_match = PROGRESS_PATTERN.match(line)
             completed_match = COMPLETED_PATTERN.match(line)
             if progress_match:
+                run_info["active_step"] = int(progress_match.group(1))
                 await websocket.send_json(
                     {"type": "progress", "step": int(progress_match.group(1)), "total": int(progress_match.group(2))}
                 )
@@ -1957,6 +2086,12 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
                 if "[WARNING]" in line:
                     warning_lines.append(line)
         returncode = await process.wait()
+        if returncode != 0:
+            failure_screenshot = await asyncio.to_thread(_capture_failure_screenshot, run_id)
+            if failure_screenshot:
+                screenshot_line = f"Failure screenshot saved: {failure_screenshot}"
+                all_lines.append(screenshot_line)
+                await websocket.send_json({"type": "log", "line": screenshot_line})
         # A non-zero exit means the run either errored out or was stopped (POST .../stop kills the
         # process) partway through -- either way there's no clean set of WARNING lines to point at,
         # so fall back to analyzing the tail of the whole log instead.

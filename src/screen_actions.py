@@ -6,6 +6,7 @@ import tkinter as tk
 from pathlib import Path
 
 import pyautogui
+import pygetwindow as gw
 from PIL import Image
 
 CONFIDENCE = 0.8
@@ -28,8 +29,44 @@ POSITIONS = {
     "bottom-left": (0.0, 1.0),
     "bottom-right": (1.0, 1.0),
 }
+REGION_ORIGINS = {"screen", "active_window"}
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_search_region(
+    region: tuple[int, int, int, int] | None,
+    region_origin: str = "screen",
+) -> tuple[int, int, int, int] | None:
+    """Resolve a region from screen coordinates or the current foreground window."""
+    if region_origin == "screen":
+        return region
+    if region_origin != "active_window":
+        raise ValueError(f"Unknown region origin: {region_origin}")
+    try:
+        window = gw.getActiveWindow()
+    except Exception as exc:
+        raise RuntimeError(f"Could not inspect the active window: {exc}") from exc
+    if window is None or window.width <= 0 or window.height <= 0:
+        raise RuntimeError("Could not determine the active window bounds for image search")
+    if region is None:
+        return (window.left, window.top, window.width, window.height)
+    return (window.left + region[0], window.top + region[1], region[2], region[3])
+
+
+def ensure_target_window(title_contains: str | None) -> None:
+    """Fail closed if the requested foreground-window title is not active."""
+    if not title_contains:
+        return
+    try:
+        window = gw.getActiveWindow()
+        title = getattr(window, "title", "") if window is not None else ""
+    except Exception as exc:
+        raise RuntimeError(f"Could not inspect the active window: {exc}") from exc
+    if title_contains.casefold() not in title.casefold():
+        raise RuntimeError(
+            f"Target window check failed: active window title {title!r} does not contain {title_contains!r}"
+        )
 
 
 def locate_image(
@@ -72,11 +109,15 @@ def _locate_any(
     offset: tuple[int, int] | None,
     position: str,
     region: tuple[int, int, int, int] | None,
+    region_origin: str,
+    target_window_title: str | None,
 ) -> tuple[pyautogui.Point, str | Path] | None:
     """Try each image_path once, in order, and return the first match plus which path matched."""
+    ensure_target_window(target_window_title)
+    resolved_region = resolve_search_region(region, region_origin)
     for index, image_path in enumerate(image_paths, start=1):
         logger.debug("Trying image candidate %d/%d: %s", index, len(image_paths), image_path)
-        location = locate_image(image_path, confidence=confidence, offset=offset, position=position, region=region)
+        location = locate_image(image_path, confidence=confidence, offset=offset, position=position, region=resolved_region)
         if location is not None:
             logger.info("Matched image candidate %d/%d: %s", index, len(image_paths), image_path)
             return location, image_path
@@ -106,6 +147,8 @@ def move_mouse_to_image(
     retries: int = RETRIES,
     retry_interval_ms: int = RETRY_INTERVAL_MS,
     region: tuple[int, int, int, int] | None = None,
+    region_origin: str = "screen",
+    target_window_title: str | None = None,
 ) -> bool:
     """Try each path in image_paths in order and move the mouse to the first match.
 
@@ -117,7 +160,7 @@ def move_mouse_to_image(
     Returns True if any image was found, False otherwise.
     """
     result = _search_with_retry(
-        lambda: _locate_any(image_paths, confidence, offset, position, region), retries, retry_interval_ms
+        lambda: _locate_any(image_paths, confidence, offset, position, region, region_origin, target_window_title), retries, retry_interval_ms
     )
     if result is None:
         logger.warning("None of the images were found on screen after %d attempt(s): %s", retries + 1, image_paths)
@@ -155,6 +198,8 @@ def click_image(
     double_click: bool = False,
     click_indicator_duration: float = OVERLAY_DURATION,
     region: tuple[int, int, int, int] | None = None,
+    region_origin: str = "screen",
+    target_window_title: str | None = None,
 ) -> bool:
     """Try each path in image_paths in order, flash the first match, then click (or double-click) there.
 
@@ -166,7 +211,7 @@ def click_image(
     Returns True if any image was found and clicked, False otherwise.
     """
     result = _search_with_retry(
-        lambda: _locate_any(image_paths, confidence, offset, position, region), retries, retry_interval_ms
+        lambda: _locate_any(image_paths, confidence, offset, position, region, region_origin, target_window_title), retries, retry_interval_ms
     )
     if result is None:
         logger.warning("None of the images were found on screen after %d attempt(s): %s", retries + 1, image_paths)

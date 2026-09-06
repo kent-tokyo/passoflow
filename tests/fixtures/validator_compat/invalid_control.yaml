@@ -1,0 +1,8 @@
+steps:
+  - action: if
+    last_step: ok
+  - action: else
+  - action: else
+  - action: wait
+    ms: 1
+    loop: broken

@@ -1,6 +1,6 @@
 # PassoFlow
 
-![Version](https://img.shields.io/badge/version-0.1.1-blue)
+![Version](https://img.shields.io/badge/version-0.1.2-blue)
 
 An RPA tool for Windows that searches for images on screen and performs mouse actions (move, click, double-click), as well as keyboard input, clipboard operations, window activation, app launching, file operations, and reading/writing Excel/CSV data. The sequence of operations is described in a YAML scenario file.
 
@@ -23,6 +23,10 @@ scenario, add actions by click or drag, configure the required values, run it,
 and understand the result.
 
 [日本語版はこちら](README_ja.md) | [CHANGELOG](CHANGELOG.md) | [SECURITY](SECURITY.md)
+
+The staged Rust migration and PassoFlow-owned replacement boundary are documented in [the Rust engine boundary](docs/rust-engine.md). The shared YAML and action-result contract is summarized in [the scenario contract](docs/scenario-contract.md). The current Python runner remains the compatibility baseline until each migration phase passes its gate.
+
+The Rust scenario contract is available to Python through the opt-in `passoflow-python` PyO3 binding. Build it locally with `maturin develop` from `rust/crates/passoflow-python` when you need Rust-backed validation from Python.
 
 ![Screenshot](images/screenshot_passoflow_01.png)
 
@@ -88,6 +92,8 @@ every action, parameter, variable, loop, branch, and validation rule.
 A browser-based visual editor (`web-ui/`, a React + Vite app) backed by `src/api_server.py` (FastAPI). Launch both with `run_webapp.bat` on Windows or double-click `run_webapp.command` on macOS when the Python backend dependencies are available, or follow the [web UI development guide](web-ui/README.md). Importing a table creates or updates an internal `load_table` runtime step that stays hidden from the canvas. The core RPA runtime remains Windows-oriented because the project includes Win32 and Excel COM actions; the macOS launcher does not make those actions cross-platform. The editor supports scenario editing, image capture/cropping, table import and preview, loops, conditional branches, undo/redo, and run logs.
 
 Browser automation has two explicit modes: use `open_url` followed by `activate_window` and `click_image`/`type_text` to operate the visible default browser by screen image, or use `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` to operate a separate Playwright-controlled browser through CSS selectors.
+
+The Rust validator is currently opt-in. Build it with `cargo build --manifest-path rust/Cargo.toml --bin passoflow-validate`, set `PASSOFLOW_VALIDATE_BIN` to the resulting binary, and set `PASSOFLOW_USE_RUST_VALIDATOR=1` for a local runner trial. Without both settings, PassoFlow continues to use the Python validator. Use `passoflow-validate --plan <scenario.yaml>` to inspect the Rust execution plan.
 
 On Windows, run_webapp.bat starts both services in one console window. On macOS, double-click run_webapp.command when the backend dependencies are available.
 

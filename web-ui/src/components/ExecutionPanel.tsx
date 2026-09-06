@@ -27,6 +27,7 @@ interface Props {
   onImportTable: () => void
   onImportedRowsChange: (selectedRows: number[]) => void
   onStepClick: (step: number) => void
+  onRerunStep: (step: number) => void
   runContext: RunContext | null
 }
 
@@ -64,6 +65,7 @@ export default function ExecutionPanel({
   onImportTable,
   onImportedRowsChange,
   onStepClick,
+  onRerunStep,
   runContext,
 }: Props) {
   const { t } = useLocale()
@@ -240,16 +242,33 @@ export default function ExecutionPanel({
           {logs.map((line, index) => {
             const step = stepNumberFromLog(line)
             return step ? (
-              <button
-                className="log-line log-line-step"
-                key={`${index}-${line}`}
-                type="button"
-                onClick={() => onStepClick(step)}
-                aria-label={t("jumpToStep", { step: String(step) })}
-                title={t("jumpToStep", { step: String(step) })}
-              >
-                {line}
-              </button>
+              line.includes("Failure screenshots saved") ? (
+                <div className="log-line-step-row" key={`${index}-${line}`}>
+                  <button
+                    className="log-line log-line-step"
+                    type="button"
+                    onClick={() => onStepClick(step)}
+                    aria-label={t("jumpToStep", { step: String(step) })}
+                    title={t("jumpToStep", { step: String(step) })}
+                  >
+                    {line}
+                  </button>
+                  <button type="button" className="log-rerun-step" onClick={() => onRerunStep(step)}>
+                    {t("rerunFailedStep")}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="log-line log-line-step"
+                  key={`${index}-${line}`}
+                  type="button"
+                  onClick={() => onStepClick(step)}
+                  aria-label={t("jumpToStep", { step: String(step) })}
+                  title={t("jumpToStep", { step: String(step) })}
+                >
+                  {line}
+                </button>
+              )
             ) : (
               <div className="log-line" key={`${index}-${line}`}>
                 {line || "\u00a0"}

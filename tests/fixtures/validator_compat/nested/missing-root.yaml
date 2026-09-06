@@ -1,0 +1,4 @@
+steps:
+  - action: repeat
+    path: missing.yaml
+    count: 2

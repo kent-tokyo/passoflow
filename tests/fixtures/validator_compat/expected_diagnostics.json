@@ -1,0 +1,94 @@
+{
+  "valid_control.yaml": {
+    "valid": true,
+    "codes": []
+  },
+  "unknown_action.yaml": {
+    "valid": false,
+    "codes": ["unknown_action"]
+  },
+  "missing_parameter.yaml": {
+    "valid": false,
+    "codes": ["missing_parameter"]
+  },
+  "invalid_control.yaml": {
+    "valid": false,
+    "codes": ["missing_endif", "duplicate_else", "missing_loop_control"]
+  },
+  "invalid_values.yaml": {
+    "valid": false,
+    "codes": [
+      "invalid_click_type",
+      "invalid_confidence",
+      "invalid_duration",
+      "invalid_images",
+      "invalid_non_negative_number",
+      "invalid_offset",
+      "invalid_position",
+      "invalid_region_origin",
+      "invalid_region_size"
+    ]
+  },
+  "invalid_web_values.yaml": {
+    "valid": false,
+    "codes": [
+      "invalid_timeout",
+      "invalid_timeout",
+      "invalid_payload",
+      "invalid_last_step",
+      "missing_endif"
+    ]
+  },
+  "nested/root.yaml": {
+    "valid": false,
+    "codes": ["missing_parameter"]
+  },
+  "nested/missing-root.yaml": {
+    "valid": false,
+    "codes": ["missing_scenario"]
+  },
+  "nested/cycle-a.yaml": {
+    "valid": false,
+    "codes": ["circular_scenario"]
+  },
+  "nested/warning-root.yaml": {
+    "valid": true,
+    "codes": ["missing_image"]
+  },
+  "nested/table-warning-root.yaml": {
+    "valid": true,
+    "codes": ["missing_loop_table"]
+  },
+  "nested/variable-warning-root.yaml": {
+    "valid": true,
+    "codes": [
+      "undefined_variable",
+      "undefined_variable",
+      "undefined_variable"
+    ]
+  },
+  "nested/static-valid-root.yaml": {
+    "valid": true,
+    "codes": []
+  },
+  "nested/missing-steps.yaml": {
+    "valid": false,
+    "codes": ["invalid_scenario"]
+  },
+  "nested/nonmapping-step.yaml": {
+    "valid": false,
+    "codes": ["invalid_step"]
+  },
+  "nested/non-string-action.yaml": {
+    "valid": false,
+    "codes": ["invalid_action"]
+  },
+  "nested/null-action.yaml": {
+    "valid": false,
+    "codes": ["invalid_action"]
+  },
+  "nested/empty-action.yaml": {
+    "valid": false,
+    "codes": ["missing_action"]
+  }
+}

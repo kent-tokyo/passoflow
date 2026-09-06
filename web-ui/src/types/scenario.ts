@@ -16,6 +16,11 @@ export interface ActionSchema {
   labels: Record<"ja" | "en" | "zh", string>
   purpose: Record<"ja" | "en" | "zh", string>
   fields: ActionFieldSchema[]
+  outcomes?: {
+    success: boolean
+    warning_continue: boolean
+    failure_stop: boolean
+  }
 }
 
 export type ScenarioStep = { action: string } & Record<string, unknown>

@@ -1,0 +1,16 @@
+[package]
+name = "passoflow-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "PassoFlow's deterministic local execution boundary"
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+passoflow-core = { path = "../passoflow-core" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

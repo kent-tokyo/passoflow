@@ -1,15 +1,56 @@
 import sys
 import unittest
+import importlib.util
 import tempfile
+from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import run_scenario
+RUNNER_AVAILABLE = importlib.util.find_spec("pyautogui") is not None
+if RUNNER_AVAILABLE:
+    import run_scenario
 
 
+@unittest.skipUnless(RUNNER_AVAILABLE, "current Python runner dependencies are not installed")
+class ImageSearchSafetyTests(unittest.TestCase):
+    def test_active_window_region_is_offset_from_foreground_window(self):
+        import screen_actions
+
+        window = SimpleNamespace(left=100, top=200, width=800, height=600)
+        with patch.object(screen_actions.gw, "getActiveWindow", return_value=window):
+            self.assertEqual(
+                screen_actions.resolve_search_region((10, 20, 300, 200), "active_window"),
+                (110, 220, 300, 200),
+            )
+            self.assertEqual(
+                screen_actions.resolve_search_region(None, "active_window"),
+                (100, 200, 800, 600),
+            )
+
+    def test_target_window_guard_fails_closed_on_title_mismatch(self):
+        import screen_actions
+
+        window = SimpleNamespace(title="Other Window")
+        with patch.object(screen_actions.gw, "getActiveWindow", return_value=window):
+            with self.assertRaisesRegex(RuntimeError, "Target window check failed"):
+                screen_actions.ensure_target_window("Expected Window")
+
+
+@unittest.skipUnless(RUNNER_AVAILABLE, "current Python runner dependencies are not installed")
 class LastStepConditionTests(unittest.TestCase):
+    def test_action_outcome_contract_marks_recoverable_warnings(self):
+        self.assertEqual(
+            run_scenario.action_outcome_contract("click_image"),
+            {"success": True, "warning_continue": True, "failure_stop": True},
+        )
+        self.assertEqual(
+            run_scenario.action_outcome_contract("send_webhook", {"on_error": "stop"})["warning_continue"],
+            False,
+        )
+        self.assertTrue(run_scenario.action_outcome_contract("browser_click")["failure_stop"])
+
     def test_last_step_condition_matches_warning_status(self):
         state = {"last_step": "warned"}
 
@@ -45,6 +86,23 @@ class LastStepConditionTests(unittest.TestCase):
 
         self.assertEqual(variables["branch"], "warning")
 
+    def test_webhook_failure_can_stop_or_continue(self):
+        error = __import__("urllib.error", fromlist=["URLError"]).URLError("offline")
+        with patch.object(run_scenario.urllib.request, "urlopen", side_effect=error):
+            run_scenario._run_send_webhook({"url": "https://example.invalid", "on_error": "continue"}, {})
+            with self.assertRaises(RuntimeError):
+                run_scenario._run_send_webhook({"url": "https://example.invalid", "on_error": "stop"}, {})
+
+    def test_webhook_on_error_policy_is_validated(self):
+        errors = []
+        run_scenario._validate_step(
+            {"action": "send_webhook", "url": "https://example.invalid", "on_error": "retry"},
+            "test step",
+            errors,
+            [],
+        )
+        self.assertIn("on_error", errors[0])
+
     def test_completed_action_emits_machine_readable_completion_marker(self):
         with patch.dict(run_scenario.ACTIONS, {"noop": lambda _step, _variables: None}), \
              patch.object(run_scenario, "print") as print_mock, \
@@ -75,6 +133,31 @@ class LastStepConditionTests(unittest.TestCase):
         categories = {schema["action"]: schema["category"] for schema in api_server.ACTION_SCHEMA}
         self.assertEqual({categories[action] for action in ("rename_file", "move_file", "copy_file")}, {"file"})
         self.assertEqual(categories["launch_app"], "app")
+
+    def test_launch_app_startup_options_are_validated(self):
+        errors = []
+        warnings = []
+        run_scenario._validate_step(
+            {
+                "action": "launch_app",
+                "path": "app.exe",
+                "wait_for_window": "Ready",
+                "startup_timeout_ms": 5000,
+            },
+            "test step",
+            errors,
+            warnings,
+        )
+        self.assertEqual(errors, [])
+
+        errors = []
+        run_scenario._validate_step(
+            {"action": "launch_app", "path": "app.exe", "startup_timeout_ms": -1},
+            "test step",
+            errors,
+            [],
+        )
+        self.assertIn("startup_timeout_ms", errors[0])
 
     def test_local_vite_fallback_origin_is_allowed_by_cors(self):
         from fastapi.testclient import TestClient

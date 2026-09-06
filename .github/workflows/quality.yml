@@ -1,0 +1,75 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-core:
+    name: Rust core (${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.80.0, stable]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt
+      - run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+      - run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --manifest-path rust/Cargo.toml --locked
+      - run: cargo package --manifest-path rust/crates/passoflow-core/Cargo.toml --locked --no-verify
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: PASSOFLOW_VALIDATE_BIN="$PWD/rust/target/debug/passoflow-validate" python -m unittest tests/test_rust_validator_bridge.py
+
+  rust-windows:
+    name: Rust Windows adapter
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+      - run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+      - run: cargo check --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target x86_64-pc-windows-msvc
+      - run: cargo test --manifest-path rust/Cargo.toml --locked
+      - run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings
+
+  python-static:
+    name: Python static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m compileall -q src tests
+      - run: python -m unittest tests/test_rust_validator_bridge.py tests/test_validator_compatibility.py tests/test_rust_runner_opt_in.py tests/test_run_scenario_outcomes.py
+
+  web-ui:
+    name: Web UI checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run test:smoke

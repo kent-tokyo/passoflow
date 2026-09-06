@@ -11,7 +11,7 @@
 
 | 目的 | 最初に使うアクション | 代表的な次の操作 |
 | --- | --- | --- |
-| アプリを起動して操作する | `launch_app` | `wait` → `activate_window` → 画面操作またはキーボード操作 |
+| アプリを起動して操作する | `launch_app` | 起動完了を確認する場合は`wait_for_window`を設定し、`activate_window` → 画面操作またはキーボード操作 |
 | ボタンやメニューをクリックする | `click_image` | 対象画像を取得し、画面表示が遅い場合は `retry` を設定する |
 | 文字を入力する | `type_text` | 変数の値を使う場合は `{{変数名}}` を使う |
 | Excel のセルを読み書きする | `get_excel_value` / `set_excel_value` | ファイル、シート、セルを設定し、変化する値は変数にする |
@@ -41,7 +41,7 @@ Excel、画面操作、変数、キーボード入力のカテゴリに分かれ
 | --- | --- | --- |
 | `call_scenario` | `path` | 別のYAMLシナリオファイルをその場で実行する。変数は呼び出し元と共有される |
 | `repeat` | `path`, `count` | 別のYAMLシナリオファイルを`count`回連続でその場で実行する。変数は呼び出し元・各回の間で共有される |
-| `send_webhook` | `url` | HTTPリクエストを送信する。`method`は省略時`POST`。`payload`(マッピングまたはJSON文字列)をJSONボディとして送信する |
+| `send_webhook` | `url` | HTTPリクエストを送信する。`method`は省略時`POST`、`payload`はJSONとして送信する。送信必須なら`on_error: stop`を指定し、デフォルトの`continue`では警告のみで継続する |
 | `if` | `variable` または `last_step` | 条件分岐を開始する。`variable`と任意の文字列比較`equals`、または直前のアクションを調べる`last_step: ok`/`warned`を使う。`endif`と対にする必要があり、間に`else`を挟むこともできる — 詳細は下記の分岐の項を参照 |
 | `else` | なし | 直近の開いている`if`の偽の分岐の開始を示す。省略可能 — `else`のない`if`は条件が偽の場合何もしない |
 | `endif` | なし | 直近の開いている`if`・`else`ブロックの終わりを示す |
@@ -58,7 +58,7 @@ Excel、画面操作、変数、キーボード入力のカテゴリに分かれ
 | `clear_input` | なし | フォーカスされている要素の内容を消去する(Ctrl+Aで全選択してからDelete) |
 | `press_key` | `key` | 1つのキーを押す(例: `enter`・`tab`・`esc`)。その後`wait`ミリ秒(デフォルト100)待機する |
 | `hotkey` | `keys` | 複数のキーを同時に押す(例: `[ctrl, v]`でCtrl+V) |
-| `launch_app` | `path` | 指定した実行ファイルを起動する(終了を待たない)。`args`で引数リストを渡せる |
+| `launch_app` | `path` | 指定した実行ファイルを起動する。`wait_for_window`を指定するとウィンドウタイトルを待ち、早期終了を検出する。`startup_timeout_ms`で待機上限を設定できる。`args`で引数リストを渡せる |
 | `rename_file` | `path`, `new_name` | ファイルを現在のフォルダ内でリネームする |
 | `move_file` | `path`, `destination` | ファイルを`destination`(完全な移動先パス)へ移動する。存在しない親フォルダは自動作成される |
 | `copy_file` | `path`, `destination`, `if_destination_newer` | ファイル(`path`にワイルドカードを使う場合はマッチした全ファイル)を`destination`へコピーする。存在しないフォルダは自動作成される。`if_destination_newer`(`overwrite`/`skip`、デフォルト`overwrite`)でコピー先に既存のより新しいファイルがある場合の挙動を制御 |
@@ -90,13 +90,15 @@ Excel、画面操作、変数、キーボード入力のカテゴリに分かれ
 
 安定したDOMセレクタを使える場合は、`browser_navigate`、`browser_click`、`browser_fill`、`browser_wait_for`を使う。こちらは座標の影響を受けず一般に正確だが、PlaywrightとChromium（`python -m playwright install chromium`）が必要。DOMブラウザはシナリオ内のこれらのアクションで共有され、シナリオ終了時に閉じる。
 
+エディタの「一致をプレビュー」では、URLとセレクタを指定して一時的なローカルPlaywrightページを開き、一致する要素数を確認できる。シナリオのブラウザ状態は変更しないため、提示された候補セレクタは内容を確認してから使う。
+
 ## 各アクションの詳細な挙動
 
 | action | 詳細な挙動 |
 | --- | --- |
 | `call_scenario` | 対象のYAMLを読み込み、同一プロセス内でその`steps`をその場で実行する。`variables`辞書は呼び出し元と同一のオブジェクト(コピーではない)なので、呼び出し先の`set_variable`・`set_*_variable`系のステップで設定した値は呼び出し元にも反映される(逆も同様)。ネストした実行では、Web UIが実行中ステップをハイライトするために使う`@@PROGRESS@@n/total`マーカーが出力されない。ネスト先のステップ番号はサブシナリオ内での番号であり呼び出し元の番号と対応しないため、実行中はUI上`call_scenario`のステップ自体がハイライトされ続ける。 |
 | `repeat` | 読み込み・変数共有・進捗マーカーの挙動は`call_scenario`と同じだが、対象の`steps`を`count`回連続で実行してから次のステップへ進む。`count`は正の整数である必要がある。 |
-| `send_webhook` | `url`内の`{{...}}`プレースホルダを解決する。`payload`がマッピングの場合は中の全ての文字列値を再帰的に解決し、JSON文字列の場合は解決後のテキストを`json.loads`でパースする。リクエスト送信にはPython標準の`urllib.request`を使う(追加の依存パッケージなし)。`payload`を指定した場合は`Content-Type: application/json`が自動で設定される。リクエストが失敗した場合(接続エラー・`urllib.error.URLError`で捕捉される非2xx応答など)は警告ログを出すのみでシナリオは停止しない(画像が見つからない場合と同様)。 |
+| `send_webhook` | `url`内の`{{...}}`プレースホルダを解決し、`payload`も再帰的に解決する。リクエスト送信にはPython標準の`urllib.request`を使い、`payload`指定時は`Content-Type: application/json`を自動設定する。失敗時はデフォルトで警告して継続し、`on_error: stop`を指定した場合はシナリオを停止する。 |
 | `set_variable` | `value`をそのまま保存する。`value`自体は`{{...}}`プレースホルダの解決対象ではない(解決されるのは`type_text`・`set_clipboard`の`text`と`concat_variable`の`value`)。`name`・`value`はどちらもそのまま扱われる(日本語可)。 |
 | `concat_variable` | `set_variable`と同じだが、`value`は先に`{{...}}`プレースホルダが解決される(`type_text`・`set_clipboard`と同じ`_resolve()`を使用) — 他の変数同士や変数と固定文字を連結できる。例: `{{last_name}}{{first_name}}`や`{{name}}様`。 |
 | `set_year_month_variable` / `set_year_month_day_variable` / `set_month_start_variable` / `set_month_end_variable` | いずれも`datetime.now()`を基準に、まず`days_offset`(`timedelta(days=...)`)を適用し、その後`months_offset`を適用する — 月を加算する際は日を対象月の末日にクランプするため、例えば1月31日に`months_offset: -1`を指定すると3月3日ではなく2月28日(閏年なら29日)になる。そこから先の書式・上書きがそれぞれ異なる: `set_year_month_variable`は`%Y%m`で書式化。`set_year_month_day_variable`は`%Y/%m/%d`で書式化。`set_month_start_variable`は`%Y/%m/01`で書式化(「01」は固定の文字であり実際のstrftimeコードではないため、実際に計算された日が何日であっても常に01日になる)。`set_month_end_variable`は書式化する前に日を`calendar.monthrange`で求めた対象月の実際の末日(28〜31日)に上書きしてから`%Y/%m/%d`で書式化する — これが「月末」を正しく求める方法であり、`months_offset`自身のクランプ(今日の日にちがたまたま対象月の日数を超えている場合のみ末日になる)とは異なる。 |
@@ -107,7 +109,7 @@ Excel、画面操作、変数、キーボード入力のカテゴリに分かれ
 | `clear_input` | フォーカスされている要素にCtrl+A、続けて`delete`キーを送信する。クリップボードには手を加えない。 |
 | `press_key` | `key`をそのまま`pyautogui.press`に渡す。値はpyautoguiの`KEYBOARD_KEYS`(後述)のいずれかである必要がある。その後`wait`ミリ秒(デフォルト100)だけ待機する。これは各ステップの後に自動で適用される`STEP_DELAY`(50ms)とは別に加算される。 |
 | `hotkey` | `keys`をそのまま`pyautogui.hotkey(*keys)`に渡す。複数キーは順番に押すのではなく同時に(コードとして)押される。 |
-| `launch_app` | `subprocess.Popen([path, *args])`を実行してすぐに戻る。プロセスの終了を待たず、起動に成功したかどうかの確認も行わない。 |
+| `launch_app` | `subprocess.Popen([path, *args])`を実行する。プロセス生成に失敗するとシナリオを停止する。`wait_for_window`にタイトルの一部を指定するとアプリのウィンドウを待ち、起動直後の終了や`startup_timeout_ms`のタイムアウトもシナリオを停止する。指定しない場合はプロセス生成後に戻る。 |
 | `rename_file` | `path`・`new_name`内の`{{...}}`プレースホルダを解決し、`Path(path).rename(Path(path).parent / new_name)`を呼ぶ — `new_name`はパスではなく単なるファイル名で、ファイルは元のフォルダに留まる。失敗した場合(元ファイルが存在しない、名前の衝突など)は警告ログを出すのみでクラッシュしない。 |
 | `move_file` | `path`・`destination`内の`{{...}}`プレースホルダを解決し、`destination`の親フォルダが無ければ作成し(`Path(destination).parent.mkdir(parents=True, exist_ok=True)`)、`shutil.move`を呼ぶ。`destination`は常にフォルダではなく完全なファイルパス — 同名のままフォルダへ移動したい場合は`{{folder}}/元のファイル名.拡張子`の形でパスを組み立てる。失敗した場合は警告ログを出すのみでクラッシュしない。 |
 | `copy_file` | `path`・`destination`内の`{{...}}`プレースホルダを解決する。`path`にワイルドカード文字(`*`, `?`, `[...]`)が含まれない場合は`move_file`と同様だが`shutil.copy2`(更新日時などのメタデータも保持する)を呼ぶ — `destination`は完全なファイルパスで、その親フォルダが無ければ自動作成される。ワイルドカードが含まれる場合は`glob.glob(path)`で展開し、マッチした各ファイルを`destination`(この場合はフォルダとして扱われ、無ければ自動作成)へ元のファイル名のままコピーする。マッチが0件の場合は警告ログを出すだけで何もコピーしない。いずれの場合も`if_destination_newer`(`overwrite`/`skip`、デフォルト`overwrite`)が、コピー先に既にファイルがありその更新日時がコピー元より新しい場合の挙動を制御する — `overwrite`は上書きし、`skip`はそのままにする。失敗した場合は警告ログを出すのみでクラッシュしない。 |
@@ -129,6 +131,8 @@ Excel、画面操作、変数、キーボード入力のカテゴリに分かれ
 | `start` / `end` | 何もしない。Webのフローエディタで開始・終了を視覚的に示すためだけに存在し、実行時には影響しない。 |
 
 ## 実行中の画面オーバーレイ
+
+実行が失敗または停止した場合、PassoFlowは最終画面と、画面キャプチャが利用できれば失敗ステップの前後画像を`logs/`に保存します。保存先は実行ログに表示されます。画面内容に機密情報が含まれる場合があるため、取り扱いに注意してください。
 
 シナリオ実行中、何を操作しているかがわかるように、常に最前面かつクリックを妨げない(下にある操作対象へそのまま通す)2種類のオーバーレイを表示する(`src/overlay.py`で実装):
 
@@ -177,6 +181,8 @@ Web UI上では、`key`・`keys`フィールドはドロップダウンから選
 | `offset` | なし | `[x, y]`でマッチした画像の左上からのピクセル位置を指定する。`position`と両方指定した場合は`offset`が優先される |
 | `position` | `center` | マッチした画像上の狙う位置を名前で指定する: `center`・`top`・`bottom`・`left`・`right`・`top-left`・`top-right`・`bottom-left`・`bottom-right` |
 | `region` | なし | `[left, top, width, height]` の画面ピクセル範囲（任意）。対象ウィンドウやパネルに検索を絞ると高速化し、誤検出を減らせる |
+| `region_origin` | `screen` | `active_window`にすると`region`を現在の前面ウィンドウ左上からの相対値として解釈する。`region`を省略すると前面ウィンドウ全体を検索する。ウィンドウ移動に強くするには、画像操作の直前に対象ウィンドウをアクティブにする |
+| `target_window_title` | なし | 安全確認（任意）。検索前に前面ウィンドウのタイトルへこの文字列が含まれることを確認し、不一致なら停止する。誤ったウィンドウへのクリックが危険な場合に使う |
 | `retry` | `0` | 画像(または`activate_window`の場合はウィンドウ)がすぐに見つからない場合の追加試行回数。デフォルトの`0`は1回試して諦める、つまり従来の挙動のまま |
 | `retry_interval_ms` | `500` | 試行間の待機時間(ミリ秒)。`retry`が1以上の場合のみ意味を持つ。`retry`だけ指定して`retry_interval_ms`を省略しても問題ない |
 | `click_indicator_duration` | `0.25` | `click_image`でクリック前に赤丸を表示する秒数。既定値は視認性を保ちつつ高速な0.25秒。録画やデバッグ時は増やし、`0`で非表示にできる |
@@ -398,6 +404,10 @@ Web UIでは、実行パネルの「取り込んだデータ」タブにある�
 - `last_step`はシナリオを継続できたアクションの結果だけを表す。致命的な例外が発生した場合は、後続の`if`に到達する前に実行が中断される。
 
 ## バリデーション
+
+## アクション結果
+
+すべてのアクションは、成功・既知の問題を警告して継続・予期しない例外や検証エラーで失敗停止、という3状態の契約を持つ。画像検索、ウィンドウアクティベーション、ファイル・ネットワーク操作、表の読み込み、Excelの読み書きでは想定される運用上の問題を警告として継続する。`send_webhook`はデフォルトで警告継続し、`on_error: stop`を選ぶと停止する。エディタ連携用に、`/api/actions`レスポンスの`outcomes`でもこの契約を取得できる。
 
 `run_scenario.py`は最初のステップを実行する前に、シナリオ全体を検証する。`call_scenario`で参照される全てのファイルも再帰的に検証対象になる。これにより、RPAが画面操作を始める前の段階で書き方のミスに気付ける(実行途中で発覚するのではなく)。
 

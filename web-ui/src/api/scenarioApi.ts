@@ -22,6 +22,33 @@ export async function fetchActionSchemas(): Promise<ActionSchema[]> {
   return res.data
 }
 
+export interface EnvironmentStatus {
+  dom_browser: {
+    playwright: boolean
+    chromium: boolean
+    message: string
+  }
+}
+
+export async function fetchEnvironmentStatus(): Promise<EnvironmentStatus> {
+  const res = await axios.get<EnvironmentStatus>(`${API_BASE}/api/environment`)
+  return res.data
+}
+
+export interface DomPreviewResult {
+  url: string
+  selector: string
+  count: number
+  samples: Array<{ tag: string; text: string; id: string; testid: string; visible: boolean; selector: string }>
+  suggested_selector: string | null
+  repair_suggestions: Array<{ selector: string; count: number }>
+}
+
+export async function previewDomSelector(url: string, selector: string): Promise<DomPreviewResult> {
+  const res = await axios.post<DomPreviewResult>(`${API_BASE}/api/dom/preview`, { url, selector })
+  return res.data
+}
+
 export async function fetchScenarioList(): Promise<ScenarioSummary[]> {
   const res = await axios.get<ScenarioSummary[]>(`${API_BASE}/api/scenarios`)
   return res.data

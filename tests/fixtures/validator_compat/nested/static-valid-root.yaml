@@ -1,0 +1,13 @@
+steps:
+  - action: set_variable
+    name: order_id
+    value: "A-1"
+  - action: paste_variable
+    name: order_id
+  - action: load_table
+    path: data.csv
+    name: rows
+  - action: wait
+    ms: 1
+    loop: rows_loop
+    loop_table: rows

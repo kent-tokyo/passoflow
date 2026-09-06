@@ -1,0 +1,3 @@
+steps:
+  - action: click_image
+    images: [not-found.png]

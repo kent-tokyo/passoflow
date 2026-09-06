@@ -61,3 +61,4 @@ YAMLファイルを直接編集したい方、全アクションのパラメー�
 - DOM 方式: Playwright で制御するブラウザを `browser_navigate`、`browser_click`、`browser_fill`、`browser_wait_for` と CSS セレクタで操作します。
 
 DOM 方式を使う前に `python -m playwright install chromium` を一度実行してください。
+エディタ起動時に初回ガイドがPlaywrightパッケージとChromiumを確認し、不足している場合は必要なコマンドを表示します。

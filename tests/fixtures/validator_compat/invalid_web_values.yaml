@@ -1,0 +1,12 @@
+steps:
+  - action: browser_click
+    selector: "#submit"
+    timeout_ms: 0
+  - action: browser_wait_for
+    selector: "#status"
+    timeout_ms: 1.5
+  - action: send_webhook
+    url: https://example.invalid
+    payload: [not, a, mapping]
+  - action: if
+    last_step: unknown

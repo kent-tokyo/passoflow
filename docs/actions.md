@@ -11,7 +11,7 @@ catalog below remains the detailed reference for every parameter.
 
 | Goal | Start with | Typical next steps |
 | --- | --- | --- |
-| Open an application and work in it | `launch_app` | `wait` → `activate_window` → screen or keyboard actions |
+| Open an application and work in it | `launch_app` | Set `wait_for_window` when readiness matters, then use `activate_window` → screen or keyboard actions |
 | Click a button or menu | `click_image` | Capture the target image, then set `retry` if the screen may load slowly |
 | Enter text | `type_text` | Use `{{variable}}` when text comes from a variable |
 | Read or write one Excel cell | `get_excel_value` / `set_excel_value` | Set the file, sheet, and cell; use a variable for values that change |
@@ -41,7 +41,7 @@ window activation remain in App.
 | --- | --- | --- |
 | `call_scenario` | `path` | Runs another YAML scenario file in place. Variables are shared with the caller |
 | `repeat` | `path`, `count` | Runs another YAML scenario file in place, `count` times in a row. Variables are shared with the caller, across iterations |
-| `send_webhook` | `url` | Sends an HTTP request. `method` defaults to `POST`; `payload` (a mapping or a JSON string) is sent as the JSON body |
+| `send_webhook` | `url` | Sends an HTTP request. `method` defaults to `POST`; `payload` is sent as JSON. Set `on_error: stop` when delivery is required; the default `continue` only warns |
 | `if` | `variable` or `last_step` | Starts a conditional block. Use `variable` with optional text comparison `equals`, or use `last_step: ok`/`warned` to inspect the immediately previous action. Must be paired with an `endif`, with an optional `else` in between — see Branching below |
 | `else` | none | Marks the start of the false branch of the nearest open `if`. Optional — an `if` without an `else` just does nothing when its condition is false |
 | `endif` | none | Marks the end of the nearest open `if`/`else` block |
@@ -58,7 +58,7 @@ window activation remain in App.
 | `clear_input` | none | Clears the focused element: selects all (Ctrl+A) then deletes |
 | `press_key` | `key` | Presses a single key (e.g. `enter`, `tab`, `esc`), then waits `wait` milliseconds (default 100) |
 | `hotkey` | `keys` | Presses multiple keys simultaneously (e.g. `[ctrl, v]` for Ctrl+V) |
-| `launch_app` | `path` | Launches the specified executable (does not wait for it to exit). Pass a list of arguments with `args` |
+| `launch_app` | `path` | Launches the specified executable. `wait_for_window` optionally waits for a matching window title and detects an early process exit; `startup_timeout_ms` limits that wait. Pass a list of arguments with `args` |
 | `rename_file` | `path`, `new_name` | Renames a file within its current folder |
 | `move_file` | `path`, `destination` | Moves a file to `destination` (a full target path). Missing parent folders are created |
 | `copy_file` | `path`, `destination`, `if_destination_newer` | Copies a file (or, if `path` has wildcards, every matching file) to `destination`. Missing folders are created. `if_destination_newer` (`overwrite`/`skip`, default `overwrite`) controls whether an existing, newer destination file is left alone |
@@ -90,13 +90,15 @@ Use `open_url` followed by `activate_window` and `click_image`/`type_text` when 
 
 Use `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` when the page exposes stable DOM selectors. This mode is usually more precise and avoids screen-coordinate issues, but requires Playwright and Chromium (`python -m playwright install chromium`). The DOM browser session is shared by these actions within one scenario and closed when the scenario ends.
 
+In the editor, `Preview matches` opens a separate headless local Playwright page for a URL and reports how many elements the selector matches. It does not change the scenario browser session; use the suggested selector only after checking that the result is appropriate.
+
 ## Detailed behavior per action
 
 | action | detailed behavior |
 | --- | --- |
 | `call_scenario` | Loads the target YAML and runs its `steps` inline, in the same process. The `variables` dict is the *same object* as the caller's (not a copy), so any `set_variable`/`set_*_variable` step inside the called scenario is visible to the caller after it returns, and vice versa. Nested steps do not emit the `@@PROGRESS@@n/total` marker that the web UI uses to highlight the running step — the UI keeps highlighting the `call_scenario` step itself for the whole nested run, since the nested step numbers are relative to the sub-scenario, not the caller's. |
 | `repeat` | Same loading/variable-sharing/progress-marker behavior as `call_scenario`, but runs the target's `steps` `count` times in a row before moving on to the next step. `count` must be a positive integer. |
-| `send_webhook` | Resolves `{{...}}` placeholders in `url`, and — recursively, for every string value — in `payload` if it's a mapping, or in the raw text if `payload` is a JSON string (parsed with `json.loads` after resolving). Sends the request with Python's standard `urllib.request` (no extra dependency); if `payload` is present, `Content-Type: application/json` is set automatically. A failed request (connection error, non-2xx via `urllib.error.URLError`) logs a warning and does not stop the scenario, same as a missed image match. |
+| `send_webhook` | Resolves `{{...}}` placeholders in `url`, and recursively in `payload`. Sends the request with Python's standard `urllib.request`; if `payload` is present, `Content-Type: application/json` is set automatically. A failed request logs a warning and continues by default; set `on_error: stop` to make delivery failure stop the scenario. |
 | `set_variable` | Stores `value` as-is; `value` itself is not resolved for `{{...}}` placeholders (only `type_text`'s, `set_clipboard`'s, and `concat_variable`'s `text`/`value` are). `name` and `value` are always treated as-is (both may contain Japanese). |
 | `concat_variable` | Same as `set_variable`, except `value` *is* resolved for `{{...}}` placeholders first (same `_resolve()` used by `type_text`/`set_clipboard`) — reference other variables to concatenate them with each other or with literal text, e.g. `{{last_name}}{{first_name}}` or `{{name}}様`. |
 | `set_year_month_variable` / `set_year_month_day_variable` / `set_month_start_variable` / `set_month_end_variable` | All four compute `datetime.now()`, apply `days_offset` first (`timedelta(days=...)`), then `months_offset` — adding months clamps the day to the target month's length, so e.g. Jan 31 with `months_offset: -1` becomes Feb 28 (or 29 in a leap year), not Mar 3. Each then formats/overrides the result differently: `set_year_month_variable` formats as `%Y%m`; `set_year_month_day_variable` formats as `%Y/%m/%d`; `set_month_start_variable` formats as `%Y/%m/01` (the `01` is fixed text, not a real strftime code, so it's always day 01 regardless of the actual computed day); `set_month_end_variable` overrides the day to the target month's actual last day (28-31) via `calendar.monthrange` before formatting as `%Y/%m/%d` — this is what actually computes "the last day of the month" correctly regardless of today's day-of-month, unlike `months_offset`'s own clamping (which only happens to produce the last day when today's day-of-month already exceeds it). |
@@ -107,7 +109,7 @@ Use `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` 
 | `clear_input` | Sends Ctrl+A then the `delete` key to whichever element has focus; does not touch the clipboard. |
 | `press_key` | Passes `key` straight to `pyautogui.press`; must be one of pyautogui's `KEYBOARD_KEYS` names (see below). Then sleeps `wait` milliseconds (default 100), separate from the automatic `STEP_DELAY` (50ms) applied after every step. |
 | `hotkey` | Passes `keys` straight to `pyautogui.hotkey(*keys)`, pressing them together as a chord, not sequentially. |
-| `launch_app` | Runs `subprocess.Popen([path, *args])` and returns immediately; does not wait for the process to exit or check that it started successfully. |
+| `launch_app` | Runs `subprocess.Popen([path, *args])`. A spawn error stops the scenario. Set `wait_for_window` to a title fragment to wait for the application window; an early process exit or `startup_timeout_ms` timeout stops the scenario. Without `wait_for_window`, the action returns after the process is spawned. |
 | `rename_file` | Resolves `path`/`new_name` for `{{...}}` placeholders and calls `Path(path).rename(Path(path).parent / new_name)` — `new_name` is a bare file name, not a path; the file stays in its original folder. A failure (missing source file, name collision) logs a warning rather than crashing the run. |
 | `move_file` | Resolves `path`/`destination` for `{{...}}` placeholders, creates `destination`'s parent folder if missing (`Path(destination).parent.mkdir(parents=True, exist_ok=True)`), then calls `shutil.move`. `destination` is always a full file path, not a folder — to move into a folder while keeping the same name, build the path with `{{folder}}/original_name.ext`. A failure logs a warning rather than crashing the run. |
 | `copy_file` | Resolves `path`/`destination` for `{{...}}` placeholders. If `path` contains no wildcard characters (`*`, `?`, `[...]`), behaves like `move_file` but calls `shutil.copy2` (which preserves metadata like the modification time) — `destination` is a full file path, and its parent folder is created if missing. If `path` does contain a wildcard, it's expanded with `glob.glob(path)` and every matched file is copied into `destination`, which is then treated as a folder (created if missing) — each file keeps its original name; no matches logs a warning and copies nothing. In both cases, `if_destination_newer` (`overwrite`/`skip`, default `overwrite`) controls what happens when the destination file already exists and its modification time is newer than the source's: `overwrite` copies over it anyway, `skip` leaves it untouched. A failure logs a warning rather than crashing the run. |
@@ -129,6 +131,8 @@ Use `browser_navigate`, `browser_click`, `browser_fill`, and `browser_wait_for` 
 | `start` / `end` | No-ops. They only exist as visual start/end markers for the web-based flow editor and have no runtime effect. |
 
 ## On-screen run overlays
+
+When a run fails or is stopped, PassoFlow records a final screenshot and, when screen capture is available, before/after screenshots for the failed step under `logs/`. The paths are included in the execution log; these files may contain sensitive screen content.
 
 While a scenario runs, two always-on-top, click-through overlays (implemented in `src/overlay.py`) help show what's being automated, without ever intercepting a click meant for the real application:
 
@@ -177,6 +181,8 @@ In the web UI, `key`/`keys` fields can also be filled by pressing the actual key
 | `offset` | none | `[x, y]` pixel position relative to the matched image's top-left corner. Takes precedence over `position` when both are set |
 | `position` | `center` | Named point on the matched image to target: `center`, `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` |
 | `region` | none | Optional search rectangle `[left, top, width, height]` in screen pixels. Restricting the search to the target window or panel improves speed and reduces false matches |
+| `region_origin` | `screen` | Set to `active_window` to interpret `region` from the current foreground window's top-left. If `region` is omitted, the whole foreground window is searched. This is useful when the window moves; activate the intended window immediately before the image action |
+| `target_window_title` | none | Optional fail-closed safety check. Before searching, the foreground window title must contain this text; use it when a wrong-window click would be costly |
 | `retry` | `0` | Number of additional attempts if the image isn't found right away. `0` (default) means try once and give up, matching the previous behavior |
 | `retry_interval_ms` | `500` | Milliseconds to wait between attempts. Only relevant when `retry` is greater than 0; you don't need to set this just to set `retry` |
 | `click_indicator_duration` | `0.25` | Seconds to show the red click indicator before a `click_image` action. Set to `0` to disable it; increase it when recording or debugging |
@@ -398,6 +404,10 @@ If the referenced table was never loaded (a missing/failed `load_table` step, or
 - `last_step` only describes an action that completed and allowed the scenario to continue. A fatal exception aborts the run before a following `if` can execute.
 
 ## Validation
+
+## Action outcomes
+
+Every action has the same three-state contract: a successful action continues normally; a known recoverable problem may emit a warning and continue; an unexpected exception or validation error stops the run. Image search, window activation, file/network operations, table loading, and Excel read/write actions use the warning/continue path for expected operational misses. `send_webhook` warns and continues by default, or stops when `on_error: stop` is selected. The `/api/actions` response exposes this contract as `outcomes` for editor integrations.
 
 Before running any step, `run_scenario.py` validates the whole scenario — including every file reachable through `call_scenario`, recursively. This catches authoring mistakes before the RPA touches the screen, rather than partway through a run.
 

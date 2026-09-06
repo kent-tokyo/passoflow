@@ -4,6 +4,7 @@ import type { Edge, Node } from "reactflow"
 import { openRunSocket, startRun, stopRun, validateScenario } from "../api/scenarioApi"
 import { orderNodes } from "../lib/flowConversion"
 import { writeStorage } from "../lib/storage"
+import { recordRunFinished, recordRunStarted } from "../lib/usageMetrics"
 import type { TranslationKey } from "../i18n/translations"
 import type { StepNodeData } from "../types/scenario"
 import type { RunContext } from "../components/ExecutionPanel"
@@ -87,6 +88,7 @@ export function useScenarioExecution({
 
     try {
       setRunning(true)
+      recordRunStarted()
       setStatusMessage(t("runningScenario"))
       setRunningStep(null)
       lastCompletedStepRef.current = null
@@ -108,6 +110,7 @@ export function useScenarioExecution({
           const completionMessage = lastCompletedStepRef.current == null ? t("runNoCompletedStep") : t("runLastCompleted", { step: String(lastCompletedStepRef.current) })
           const outcomeMessages: Record<string, string> = { success: t("runOutcomeSuccess"), warning: t("runOutcomeWarning"), stopped: t("runOutcomeStopped"), failed: t("runOutcomeFailed") }
           const outcomeMessage = outcomeMessages[String(message.outcome)] ?? t("runFinished", { code: String(message.returncode) })
+          recordRunFinished(String(message.outcome ?? "unknown"))
           const nextRunContext: RunContext = { ...(activeRunContextRef.current ?? { filename: currentFile, startedAt: new Date().toISOString() }), outcome: String(message.outcome ?? "unknown"), lastCompletedStep: lastCompletedStepRef.current }
           setStatusMessage(outcomeMessage)
           setRunContext(nextRunContext)

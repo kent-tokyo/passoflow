@@ -1,0 +1,8 @@
+steps:
+  - action: paste_variable
+    name: missing
+  - action: if
+    variable: another
+  - action: endif
+  - action: type_text
+    text: "{{third}}"

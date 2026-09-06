@@ -33,6 +33,7 @@ import { PALETTE_WIDTH, PARAMETER_PANEL_WIDTH, usePanelLayout } from "../hooks/u
 import { useScenarioShortcuts } from "../hooks/useScenarioShortcuts"
 import { useScenarioExecution } from "../hooks/useScenarioExecution"
 import { readStorage } from "../lib/storage"
+import { recordRecoveryStarted } from "../lib/usageMetrics"
 import {
   alignNodesVertically,
   computeIfFrames,
@@ -1453,6 +1454,21 @@ export default function ScenarioEditor() {
     ? computeIfFrames(nodes, edges).find((f) => f.ifId === contextMenu.ifId)
     : undefined
 
+  const rerunStepWithCountdown = useCallback((start: number, end = start) => {
+    if (pendingRunTimeoutRef.current !== null) window.clearTimeout(pendingRunTimeoutRef.current)
+    const scheduledFile = currentFileRef.current
+    setStatusMessage(t("runThisStepOnlyCountdown"))
+    pendingRunTimeoutRef.current = window.setTimeout(() => {
+      pendingRunTimeoutRef.current = null
+      if (currentFileRef.current !== scheduledFile || runningRef.current) {
+        setStatusMessage(t("runThisStepOnlyCancelled"))
+        return
+      }
+      recordRecoveryStarted()
+      handleRun({ start, end })
+    }, 3000)
+  }, [handleRun, setStatusMessage, t])
+
   const contextMenuSections = contextMenu
     ? contextMenu.nodeId
       ? [
@@ -1484,17 +1500,7 @@ export default function ScenarioEditor() {
                   // previous pending countdown, and bail out at fire time (rather than running
                   // against stale step indices, or stacking a second concurrent run) if the
                   // active scenario changed or another run started in the meantime.
-                  if (pendingRunTimeoutRef.current !== null) window.clearTimeout(pendingRunTimeoutRef.current)
-                  const scheduledFile = currentFileRef.current
-                  setStatusMessage(t("runThisStepOnlyCountdown"))
-                  pendingRunTimeoutRef.current = window.setTimeout(() => {
-                    pendingRunTimeoutRef.current = null
-                    if (currentFileRef.current !== scheduledFile || runningRef.current) {
-                      setStatusMessage(t("runThisStepOnlyCancelled"))
-                      return
-                    }
-                    handleRun({ start, end })
-                  }, 3000)
+                  rerunStepWithCountdown(start, end)
                 },
               },
             ],
@@ -1772,6 +1778,7 @@ export default function ScenarioEditor() {
         onImportTable={() => setShowTableImport(true)}
         onImportedRowsChange={handleImportedRowsChange}
         onStepClick={jumpToStep}
+        onRerunStep={rerunStepWithCountdown}
         runContext={runContext}
       />
       <StatusBar currentFile={currentFile} message={statusMessage} version={version} unsaved={hasUnsavedChanges} />

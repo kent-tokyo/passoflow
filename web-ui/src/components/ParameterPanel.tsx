@@ -1,14 +1,16 @@
-import { Camera } from "lucide-react"
+import { Camera, Copy } from "lucide-react"
 import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import type { Node } from "reactflow"
-import { imageUrl, uploadScenarioImage } from "../api/scenarioApi"
+import { fetchEnvironmentStatus, imageUrl, uploadScenarioImage } from "../api/scenarioApi"
 import { useLocale } from "../i18n/useLocale"
 import { KeyboardIcon } from "./icons"
 import { captureChordFromEvent, captureKeyFromEvent } from "../lib/keyCapture"
 import { useClickOutside } from "../lib/useClickOutside"
 import type { ActionFieldSchema, ActionSchema, StepNodeData } from "../types/scenario"
 const ScreenshotCropModal = lazy(() => import("./ScreenshotCropModal"))
+const RegionPreviewModal = lazy(() => import("./RegionPreviewModal"))
+const DomSelectorPreviewModal = lazy(() => import("./DomSelectorPreviewModal"))
 
 interface Props {
   node: Node<StepNodeData> | null
@@ -75,6 +77,8 @@ const FRIENDLY_FIELD_LABELS: Record<string, Record<"ja" | "en" | "zh", string>> 
   click_type: { ja: "クリック方法", en: "Click type", zh: "点击方式" },
   offset: { ja: "クリック位置のずれ", en: "Click offset", zh: "点击偏移" },
   region: { ja: "検索範囲", en: "Search region", zh: "搜索区域" },
+  region_origin: { ja: "検索範囲の基準", en: "Region origin", zh: "区域基准" },
+  target_window_title: { ja: "対象ウィンドウ確認", en: "Target window check", zh: "目标窗口检查" },
   click_indicator_duration: { ja: "クリック表示時間（秒）", en: "Click indicator duration (s)", zh: "点击指示器时长（秒）" },
   ms: { ja: "待機時間（ミリ秒）", en: "Wait time (ms)", zh: "等待时间（毫秒）" },
   count: { ja: "繰り返し回数", en: "Repeat count", zh: "重复次数" },
@@ -447,6 +451,49 @@ export default function ParameterPanel({
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [uploadErrors, setUploadErrors] = useState<Record<string, boolean>>({})
   const [screenshotField, setScreenshotField] = useState<ActionFieldSchema | null>(null)
+  const [selectorTest, setSelectorTest] = useState<{ value: string; valid: boolean } | null>(null)
+  const [showRegionPreview, setShowRegionPreview] = useState(false)
+  const [showDomSelectorPreview, setShowDomSelectorPreview] = useState(false)
+  const isDomAction = node?.data.action.startsWith("browser_") ?? false
+  const [domSetup, setDomSetup] = useState<"ready" | "playwright" | "chromium" | null>(null)
+  const [setupCommandCopied, setSetupCommandCopied] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setDomSetup(null)
+    setSetupCommandCopied(false)
+    if (!isDomAction) return () => { active = false }
+    fetchEnvironmentStatus().then(({ dom_browser }) => {
+      if (!active) return
+      setDomSetup(dom_browser.chromium ? "ready" : dom_browser.playwright ? "chromium" : "playwright")
+    }).catch(() => {
+      if (active) setDomSetup(null)
+    })
+    return () => { active = false }
+  }, [isDomAction, node?.data.action])
+
+  const setupCommand = domSetup === "playwright"
+    ? "pip install playwright"
+    : domSetup === "chromium"
+      ? "python -m playwright install chromium"
+      : null
+  const copySetupCommand = () => {
+    if (!setupCommand || !navigator.clipboard) return
+    navigator.clipboard.writeText(setupCommand).then(() => {
+      setSetupCommandCopied(true)
+      window.setTimeout(() => setSetupCommandCopied(false), 1800)
+    }).catch(() => setSetupCommandCopied(false))
+  }
+
+  const copyParameter = (field: ActionFieldSchema) => {
+    const value = fieldValueToText(node?.data.params[field.name])
+    if (!value || !navigator.clipboard) return
+    navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(field.name)
+      window.setTimeout(() => setCopiedField((current) => current === field.name ? null : current), 1800)
+    }).catch(() => setCopiedField(null))
+  }
 
   if (!node) {
     return (
@@ -519,6 +566,20 @@ export default function ParameterPanel({
     onChange(node.id, params)
   }
 
+  const testSelector = (value: unknown) => {
+    const selector = typeof value === "string" ? value.trim() : ""
+    if (!selector) {
+      setSelectorTest({ value: selector, valid: false })
+      return
+    }
+    try {
+      document.createElement("div").matches(selector)
+      setSelectorTest({ value: selector, valid: true })
+    } catch {
+      setSelectorTest({ value: selector, valid: false })
+    }
+  }
+
   const updateTitle = (rawValue: string) => {
     const params = { ...node.data.params }
     if (rawValue === "") {
@@ -537,6 +598,23 @@ export default function ParameterPanel({
           <span className="param-panel-step">{t("selectedStepLabel", { step: String(node.data.flowStep) })}</span>
         )}
       </h3>
+      {isDomAction && domSetup === "ready" && <p className="dom-setup-status ready">{t("domSetupReady")}</p>}
+      {isDomAction && domSetup === "playwright" && (
+        <p className="dom-setup-status warning">
+          {t("domSetupPlaywrightMissing")}
+          <button type="button" className="setup-command-copy" onClick={copySetupCommand}>
+            {setupCommandCopied ? t("setupCommandCopied") : t("copySetupCommand")}
+          </button>
+        </p>
+      )}
+      {isDomAction && domSetup === "chromium" && (
+        <p className="dom-setup-status warning">
+          {t("domSetupChromiumMissing")}
+          <button type="button" className="setup-command-copy" onClick={copySetupCommand}>
+            {setupCommandCopied ? t("setupCommandCopied") : t("copySetupCommand")}
+          </button>
+        </p>
+      )}
       <label className="param-field param-title">
         <span>{t("actionTitle")}</span>
         <input
@@ -651,23 +729,58 @@ export default function ParameterPanel({
                   onCommit={onCommit}
                 />
               ) : field.kind === "image" && field.type === "string[]" ? (
-                <textarea
-                  className="image-paths-textarea"
-                  aria-label={friendlyFieldLabel(field.name, locale)}
-                  required={field.required}
-                  aria-describedby={describedBy}
-                  rows={Math.max(3, imagePaths.length)}
-                  value={imagePaths.join("\n")}
-                  placeholder={field.default !== undefined ? String(field.default) : ""}
-                  onChange={(e) => {
-                    const paths = e.target.value
-                      .split("\n")
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                    setFieldValue(field.name, paths)
-                  }}
-                  onBlur={onCommit}
-                />
+                <div className="image-candidate-editor" aria-label={t("imageCandidateList")}>
+                  {imagePaths.map((path, index) => (
+                    <div className="image-candidate-row" key={`${path}-${index}`}>
+                      <span className="image-candidate-rank" aria-hidden="true">{index + 1}</span>
+                      <input
+                        type="text"
+                        value={path}
+                        aria-label={`${friendlyFieldLabel(field.name, locale)} ${index + 1}`}
+                        onChange={(e) => {
+                          const next = [...imagePaths]
+                          next[index] = e.target.value
+                          setFieldValue(field.name, next)
+                        }}
+                        onBlur={onCommit}
+                      />
+                      <button
+                        type="button"
+                        className="candidate-order-button"
+                        disabled={index === 0}
+                        aria-label={t("imageCandidateMoveUp", { index: String(index + 1) })}
+                        onClick={() => {
+                          const next = [...imagePaths]
+                          ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+                          setFieldValue(field.name, next)
+                          onCommit()
+                        }}
+                      >↑</button>
+                      <button
+                        type="button"
+                        className="candidate-order-button"
+                        disabled={index === imagePaths.length - 1}
+                        aria-label={t("imageCandidateMoveDown", { index: String(index + 1) })}
+                        onClick={() => {
+                          const next = [...imagePaths]
+                          ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+                          setFieldValue(field.name, next)
+                          onCommit()
+                        }}
+                      >↓</button>
+                      <button
+                        type="button"
+                        className="candidate-remove-button"
+                        aria-label={t("imageCandidateRemove", { index: String(index + 1) })}
+                        onClick={() => {
+                          setFieldValue(field.name, imagePaths.filter((_, candidateIndex) => candidateIndex !== index))
+                          onCommit()
+                        }}
+                      >×</button>
+                    </div>
+                  ))}
+                  {imagePaths.length === 0 && <span className="image-candidate-empty">{t("noItems")}</span>}
+                </div>
               ) : (
                 <input
                   type="text"
@@ -726,7 +839,39 @@ export default function ParameterPanel({
                   }}
                 />
               )}
+              {field.name === "region" && (node.data.action === "click_image" || node.data.action === "move_mouse_to_image") && (
+                <button type="button" className="browse-button" onClick={() => setShowRegionPreview(true)}>
+                  {t("previewRegion")}
+                </button>
+              )}
+              {field.name === "selector" && node.data.action.startsWith("browser_") && (
+                <>
+                  <button type="button" className="browse-button" onClick={() => testSelector(node.data.params.selector)}>
+                    {t("testSelector")}
+                  </button>
+                  <button type="button" className="browse-button" onClick={() => setShowDomSelectorPreview(true)}>
+                    {t("previewSelector")}
+                  </button>
+                </>
+              )}
+              {(field.type === "string" || field.type === "number") && !field.kind && fieldValueToText(node.data.params[field.name]) && (
+                <button
+                  type="button"
+                  className="browse-button parameter-copy-button"
+                  title={copiedField === field.name ? t("parameterCopied") : t("copyParameter")}
+                  aria-label={`${friendlyFieldLabel(field.name, locale)}: ${copiedField === field.name ? t("parameterCopied") : t("copyParameter")}`}
+                  onClick={() => copyParameter(field)}
+                >
+                  <Copy size={14} />
+                </button>
+              )}
             </div>
+            {field.name === "selector" && node.data.action.startsWith("browser_") && selectorTest?.value === String(node.data.params.selector ?? "").trim() && (
+              <span className={`selector-test-result ${selectorTest.valid ? "valid" : "invalid"}`} role="status">
+                {selectorTest.valid ? t("selectorValid") : t("selectorInvalid")}
+              </span>
+            )}
+            {copiedField === field.name && <span className="selector-test-result valid" role="status">{t("parameterCopied")}</span>}
             {uploadErrors[field.name] && <span className="param-field-error">{t("uploadImageFailed")}</span>}
             {imagePaths.length > 0 && (
               <div className="image-preview">
@@ -760,6 +905,29 @@ export default function ParameterPanel({
               onCommit()
             }}
             onClose={() => setScreenshotField(null)}
+          />
+        </Suspense>
+      )}
+      {showRegionPreview && (
+        <Suspense fallback={null}>
+          <RegionPreviewModal
+            region={Array.isArray(node.data.params.region) ? node.data.params.region.filter((value): value is number => typeof value === "number") : null}
+            regionOrigin={typeof node.data.params.region_origin === "string" ? node.data.params.region_origin : "screen"}
+            onClose={() => setShowRegionPreview(false)}
+          />
+        </Suspense>
+      )}
+      {showDomSelectorPreview && (
+        <Suspense fallback={null}>
+          <DomSelectorPreviewModal
+            initialUrl={typeof node.data.params.url === "string" ? node.data.params.url : ""}
+            initialSelector={typeof node.data.params.selector === "string" ? node.data.params.selector : ""}
+            onUseSelector={(selector) => {
+              updateField("selector", selector, "string")
+              onCommit()
+              setShowDomSelectorPreview(false)
+            }}
+            onClose={() => setShowDomSelectorPreview(false)}
           />
         </Suspense>
       )}

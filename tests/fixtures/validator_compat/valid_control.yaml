@@ -1,0 +1,14 @@
+title: Control flow
+steps:
+  - action: if
+    last_step: ok
+  - action: else
+  - action: endif
+  - action: wait
+    ms: 1
+    loop: retry_block
+    loop_count: 2
+  - action: wait
+    ms: 1
+    loop: retry_block
+    loop_count: 2

@@ -2,11 +2,7 @@
 
 Small, user-visible improvements that fit PassoFlow's local-first scope:
 
-- [ ] Let users add, remove, and reorder image candidates in the editor.
-- [ ] Support an active-window-relative image-search region.
-- [ ] Add selector capture and preview for DOM browser actions.
-- [ ] Add browser-session options and clearer selector/action errors.
-- [ ] Add first-use and DPI/scaling regression scenarios.
+- [ ] Phase 0: freeze the complete YAML/action/outcome contract and add CI/license metadata.
+- [ ] Phase 1: run the compatibility suite with desktop dependencies installed.
 
-Keep larger features out of this file unless they directly improve GUI authoring, image recognition, repeatability, safety, or ease of setup.
-
+Phase 3 failure evidence and guarded step rerun are implemented. Keep larger features out of this file unless they directly improve GUI authoring, image recognition, repeatability, safety, or ease of setup.

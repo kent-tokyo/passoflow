@@ -1,0 +1,3 @@
+steps:
+  - action: browser_click
+    title: Missing selector

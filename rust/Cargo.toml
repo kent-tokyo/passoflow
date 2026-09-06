@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/passoflow-core",
+    "crates/passoflow-input",
+    "crates/passoflow-capture",
+    "crates/passoflow-vision",
+    "crates/passoflow-engine",
+    "crates/passoflow-python",
+]
+
+[workspace.package]
+version = "0.1.2"
+edition = "2021"
+rust-version = "1.80"
+description = "Rust engine components for PassoFlow local automation"
+repository = "https://github.com/kent-tokyo/passoflow"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"

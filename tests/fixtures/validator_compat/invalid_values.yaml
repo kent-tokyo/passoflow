@@ -1,0 +1,10 @@
+steps:
+  - action: click_image
+    images: button.png
+    offset: [1]
+    region: [0, 0, 0, 10]
+    position: middle
+    region_origin: window
+    confidence: 2
+    click_type: triple
+    click_indicator_duration: -1

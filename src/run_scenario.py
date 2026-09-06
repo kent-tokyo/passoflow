@@ -3,12 +3,14 @@
 import argparse
 import json
 import logging
+import os
 import re
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
+import pyautogui
 import yaml
 
 from app_paths import app_root
@@ -48,10 +50,12 @@ from web_actions import (
     close_browser,
     open_url,
 )
+from rust_validator import assert_plan_matches_steps, normalize_with_rust, plan_with_rust, validate_with_rust
 from screen_actions import (
     CONFIDENCE,
     POSITION,
     POSITIONS,
+    REGION_ORIGINS,
     RETRIES,
     RETRY_INTERVAL_MS,
     click_image,
@@ -65,6 +69,38 @@ STEP_DELAY = 0.05  # Seconds to wait after every step, so scenarios don't need a
 VARIABLE_PATTERN = re.compile(r"\{\{(.+?)\}\}")
 
 logger = logging.getLogger(__name__)
+
+RUN_ID: str | None = None
+
+# Outcome contract: actions normally succeed or stop on an unexpected exception. These
+# actions have a documented, recoverable warning path that lets the scenario continue.
+_WARNING_CONTINUE_ACTIONS = {
+    "activate_window",
+    "copy_file",
+    "create_excel_sheet",
+    "delete_excel_row",
+    "delete_excel_sheet",
+    "get_excel_value",
+    "load_table",
+    "map_network_drive",
+    "move_file",
+    "move_mouse_to_image",
+    "click_image",
+    "rename_file",
+    "run_excel_macro",
+    "save_excel_file",
+    "set_excel_value",
+    "sort_excel_range",
+}
+
+
+def action_outcome_contract(action: str, params: dict | None = None) -> dict[str, bool]:
+    """Describe the outcomes an action may produce without executing it."""
+    if action == "send_webhook" and (params or {}).get("on_error", "continue") == "continue":
+        warning_continue = True
+    else:
+        warning_continue = action in _WARNING_CONTINUE_ACTIONS
+    return {"success": True, "warning_continue": warning_continue, "failure_stop": True}
 
 
 class _StepWarningHandler(logging.Handler):
@@ -88,6 +124,30 @@ _LOADED_TABLES: dict[str, list[dict[str, str]]] = {}
 def _resolve(text: str, variables: dict[str, str]) -> str:
     """Replace {{変数名}} placeholders in text with their stored values."""
     return VARIABLE_PATTERN.sub(lambda m: variables.get(m.group(1).strip(), ""), text)
+
+
+def _capture_step_screenshot() -> object | None:
+    """Capture a best-effort in-memory image before a step."""
+    try:
+        return pyautogui.screenshot()
+    except Exception as error:
+        logger.debug("Could not capture pre-step screenshot: %s", error)
+        return None
+
+
+def _save_failure_context(before: object | None, step_number: int, action: str) -> None:
+    """Save before/after images for one failed step without masking the failure."""
+    if before is None or not RUN_ID:
+        return
+    try:
+        after = pyautogui.screenshot()
+        prefix = app_root() / "logs" / f"run_{RUN_ID}_step_{step_number}_{action}"
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        before.save(f"{prefix}_before.png")
+        after.save(f"{prefix}_after.png")
+        logger.error("Failure screenshots saved for step %d: %s_before.png and %s_after.png", step_number, prefix, prefix)
+    except Exception as error:
+        logger.warning("Could not save before/after screenshots for step %d: %s", step_number, error)
 
 
 def _run_set_variable(step: dict, variables: dict[str, str]) -> None:
@@ -158,7 +218,12 @@ def _run_hotkey(step: dict, variables: dict[str, str]) -> None:
 
 
 def _run_launch_app(step: dict, variables: dict[str, str]) -> None:
-    launch_app(step["path"], args=step.get("args"))
+    launch_app(
+        _resolve(step["path"], variables),
+        args=[_resolve(arg, variables) for arg in (step.get("args") or [])],
+        wait_for_window=_resolve(step["wait_for_window"], variables) if step.get("wait_for_window") else None,
+        startup_timeout_ms=step.get("startup_timeout_ms", 10_000),
+    )
 
 
 def _run_rename_file(step: dict, variables: dict[str, str]) -> None:
@@ -315,6 +380,8 @@ def _image_search_kwargs(step: dict) -> dict:
         "confidence": step.get("confidence", CONFIDENCE),
         "offset": _offset(step),
         "region": _region(step),
+        "region_origin": step.get("region_origin", "screen"),
+        "target_window_title": step.get("target_window_title"),
         "position": step.get("position", POSITION),
         "retries": step.get("retry", RETRIES),
         "retry_interval_ms": step.get("retry_interval_ms", RETRY_INTERVAL_MS),
@@ -433,7 +500,8 @@ def _run_send_webhook(step: dict, variables: dict[str, str]) -> None:
         with urllib.request.urlopen(request, timeout=10) as response:
             logger.info("Webhook %s %s -> %d", method, url, response.status)
     except urllib.error.URLError as e:
-        # Non-fatal, like a missed image match: log and let the scenario continue.
+        if step.get("on_error", "continue") == "stop":
+            raise RuntimeError(f"Webhook {method} {url} failed: {e}") from e
         logger.warning("Webhook %s %s failed: %s", method, url, e)
 
 
@@ -488,6 +556,11 @@ ACTIONS = {
 
 
 def _load_steps(yaml_path: str | Path) -> list[dict]:
+    if os.environ.get("PASSOFLOW_USE_RUST_VALIDATOR") == "1":
+        normalized = normalize_with_rust(yaml_path)
+        if normalized is not None:
+            scenario = yaml.safe_load(normalized)
+            return scenario["steps"]
     with open(yaml_path, encoding="utf-8") as f:
         scenario = yaml.safe_load(f)
     return scenario["steps"]
@@ -502,7 +575,7 @@ def _load_steps(yaml_path: str | Path) -> list[dict]:
 _STEP_META_KEYS = {"action", "note", "group", "title", "loop", "loop_count", "loop_table"}
 
 _RETRY_OPTIONS = {"retry", "retry_interval_ms"}
-_IMAGE_SEARCH_OPTIONS = _RETRY_OPTIONS | {"confidence", "offset", "position", "region"}
+_IMAGE_SEARCH_OPTIONS = _RETRY_OPTIONS | {"confidence", "offset", "position", "region", "region_origin", "target_window_title"}
 
 # action -> (required parameter names, optional parameter names). Keep in sync with ACTIONS above.
 _ACTION_SCHEMA = {
@@ -513,7 +586,7 @@ _ACTION_SCHEMA = {
     "endif": (set(), set()),
     "call_scenario": ({"path"}, set()),
     "repeat": ({"path", "count"}, set()),
-    "send_webhook": ({"url"}, {"method", "payload"}),
+    "send_webhook": ({"url"}, {"method", "payload", "on_error"}),
     "set_variable": ({"name", "value"}, set()),
     "concat_variable": ({"name", "value"}, set()),
     "set_year_month_variable": ({"name"}, {"days_offset", "months_offset"}),
@@ -527,7 +600,7 @@ _ACTION_SCHEMA = {
     "clear_input": (set(), set()),
     "press_key": ({"key"}, {"wait"}),
     "hotkey": ({"keys"}, set()),
-    "launch_app": ({"path"}, {"args"}),
+    "launch_app": ({"path"}, {"args", "wait_for_window", "startup_timeout_ms"}),
     "rename_file": ({"path", "new_name"}, set()),
     "move_file": ({"path", "destination"}, set()),
     "copy_file": ({"path", "destination"}, {"if_destination_newer"}),
@@ -568,8 +641,14 @@ def _validate_step(step: dict, label: str, errors: list[str], warnings: list[str
         errors.append(f"{label}: step must be a mapping, got {type(step).__name__}")
         return
 
-    action = step.get("action")
-    if action is None:
+    if "action" not in step:
+        errors.append(f"{label}: missing required key 'action'")
+        return
+    action = step["action"]
+    if not isinstance(action, str):
+        errors.append(f"{label}: 'action' must be a string")
+        return
+    if not action:
         errors.append(f"{label}: missing required key 'action'")
         return
 
@@ -607,6 +686,8 @@ def _validate_step(step: dict, label: str, errors: list[str], warnings: list[str
         errors.append(
             f"{label} ({action}): unknown position '{step['position']}' (must be one of: {', '.join(sorted(POSITIONS))})"
         )
+    if "region_origin" in step and step["region_origin"] not in REGION_ORIGINS:
+        errors.append(f"{label} ({action}): unknown region_origin '{step['region_origin']}' (must be screen or active_window)")
     if "confidence" in step and (
         isinstance(step["confidence"], bool)
         or not isinstance(step["confidence"], (int, float))
@@ -620,6 +701,12 @@ def _validate_step(step: dict, label: str, errors: list[str], warnings: list[str
             or step[option] < 0
         ):
             errors.append(f"{label} ({action}): '{option}' must be a non-negative number")
+    if "startup_timeout_ms" in step and (
+        isinstance(step["startup_timeout_ms"], bool)
+        or not isinstance(step["startup_timeout_ms"], (int, float))
+        or step["startup_timeout_ms"] < 0
+    ):
+        errors.append(f"{label} ({action}): 'startup_timeout_ms' must be a non-negative number")
 
     if action in _IMAGE_ACTIONS and isinstance(step.get("images"), list):
         for image in step["images"]:
@@ -650,6 +737,8 @@ def _validate_step(step: dict, label: str, errors: list[str], warnings: list[str
         errors.append(f"{label} ({action}): 'count' must be a positive integer")
     if action == "send_webhook" and "payload" in step and not isinstance(step["payload"], (dict, str)):
         errors.append(f"{label} ({action}): 'payload' must be a mapping or a JSON string")
+    if action == "send_webhook" and step.get("on_error", "continue") not in {"continue", "stop"}:
+        errors.append(f"{label} ({action}): 'on_error' must be 'continue' or 'stop'")
     if action == "if":
         condition_keys = [key for key in ("variable", "last_step") if key in step]
         if len(condition_keys) != 1:
@@ -769,6 +858,10 @@ def _validate_scenario(yaml_path: str | Path, _ancestors: set[Path] | None = Non
     such as a referenced image file that doesn't exist.
     """
     resolved = Path(yaml_path).resolve()
+    if _ancestors is None and os.environ.get("PASSOFLOW_USE_RUST_VALIDATOR") == "1":
+        report = validate_with_rust(resolved)
+        if report is not None:
+            return report.messages("error"), report.messages("warning")
     # Tracks files on the current call chain (ancestors), not every file visited anywhere in
     # the tree, so the same sub-scenario can legitimately be called from two sibling steps
     # without being mistaken for a cycle — only an ancestor calling back into itself is one.
@@ -829,6 +922,7 @@ def _run_block(
             # the HUD here would contradict the (deliberately unmoving) web UI progress bar.
             step_display = step.get("title") or step.get("note") or step["action"]
             overlay.set_step_label(f"Step {step_number}/{total}: {step_display}")
+        before_screenshot = _capture_step_screenshot() if RUN_ID else None
         warning_handler = _StepWarningHandler()
         logging.getLogger().addHandler(warning_handler)
         try:
@@ -838,6 +932,7 @@ def _run_block(
                 ACTIONS[step["action"]](step, variables)
         except Exception:
             runtime_state["last_step"] = "failed"
+            _save_failure_context(before_screenshot, step_number, step.get("action", "step"))
             raise
         finally:
             logging.getLogger().removeHandler(warning_handler)
@@ -923,12 +1018,14 @@ def _run_steps(
         i = j
 
 
-def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | None = None) -> None:
+def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | None = None, run_id: str | None = None) -> None:
     """Load a YAML scenario file and run its steps in order.
 
     start/end are 1-indexed and inclusive, letting the caller re-run a slice of
     the scenario (e.g. to debug one failing step) without editing the file.
     """
+    global RUN_ID
+    RUN_ID = run_id
     errors, warnings = _validate_scenario(yaml_path)
     for warning in warnings:
         logger.warning("Scenario validation warning: %s", warning)
@@ -938,6 +1035,10 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
         raise ValueError(message)
 
     all_steps = _load_steps(yaml_path)
+    if os.environ.get("PASSOFLOW_USE_RUST_VALIDATOR") == "1":
+        plan = plan_with_rust(yaml_path)
+        if plan is not None:
+            assert_plan_matches_steps(plan, all_steps)
     start_idx = (start - 1) if start else 0
     end_idx = end if end else len(all_steps)
     steps = all_steps[start_idx:end_idx]
@@ -959,6 +1060,7 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
     finally:
         overlay.clear()
         close_browser()
+        RUN_ID = None
 
 
 if __name__ == "__main__":
@@ -966,7 +1068,8 @@ if __name__ == "__main__":
     parser.add_argument("yaml_path", help="Path to the scenario YAML file")
     parser.add_argument("--start", type=int, default=None, help="1-indexed first step to run (inclusive)")
     parser.add_argument("--end", type=int, default=None, help="1-indexed last step to run (inclusive)")
+    parser.add_argument("--run-id", default=None, help="Internal run id used to name failure artifacts")
     args = parser.parse_args()
 
     setup_logging()
-    run_scenario(args.yaml_path, start=args.start, end=args.end)
+    run_scenario(args.yaml_path, start=args.start, end=args.end, run_id=args.run_id)
