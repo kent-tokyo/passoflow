@@ -18,7 +18,18 @@ jobs:
       - run: cargo publish --manifest-path rust/crates/passoflow-core/Cargo.toml --locked
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      - run: sleep 30
-      - run: cargo publish --manifest-path rust/crates/passoflow-python/Cargo.toml --locked
+      - name: Publish Python binding after core is indexed
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            if cargo publish --manifest-path rust/crates/passoflow-python/Cargo.toml --locked; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              exit 1
+            fi
+            echo "passoflow-core is not visible to the registry yet; retrying in 10 seconds (attempt $attempt/12)"
+            sleep 10
+          done
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

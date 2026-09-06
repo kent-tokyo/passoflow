@@ -6,6 +6,7 @@ build-backend = "maturin"
 name = "passoflow"
 version = "0.1.2"
 description = "Python bindings for PassoFlow's Rust scenario contracts"
+readme = "README.md"
 requires-python = ">=3.9"
 
 [tool.maturin]

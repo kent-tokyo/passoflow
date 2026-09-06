@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 description = "Python bindings for PassoFlow's Rust scenario contracts"
 repository.workspace = true
+readme = "README.md"
 [lib]
 name = "passoflow_python"
 crate-type = ["cdylib", "rlib"]
