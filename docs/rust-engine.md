@@ -24,7 +24,7 @@ compatibility baseline until each phase passes its gate.
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |
 | `passoflow-capture` | RGBA frames, regions, cropping, Windows GDI capture and diagnostics | Windows initial adapter implemented |
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
-| `passoflow-python` | PyO3 binding for validation, normalization, and plans | Initial binding implemented |
+| `passoflow-python` | PyO3 binding for validation, normalization, and plans | Binding plus type stub/example; wheel not yet republished |
 | `passoflow-web` / `passoflow-server` | Future Rust DOM adapter and local API | Planned |
 
 ## Replaced capability boundary

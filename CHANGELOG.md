@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Added a Windows one-click launcher that installs missing local dependencies, starts the API/UI, waits for readiness, and opens the browser.
 - Added a packaged-build launcher path that serves the built UI through FastAPI without requiring Node.js.
+- Added Python binding type stubs, a minimal usage example, and clean-wheel installation coverage.
 
 ### Changed
 

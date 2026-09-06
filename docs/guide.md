@@ -64,3 +64,11 @@ Choose one mode per browser flow:
 
 Install Chromium once with `python -m playwright install chromium` before using DOM mode.
 When the editor opens, the first-use guide checks for the Playwright package and Chromium and shows the missing setup command if needed.
+
+## Platform requirements
+
+Windows is the supported runtime for desktop input, screen capture, window
+activation, and Excel/COM actions. The editor can open on macOS, but its
+desktop runtime uses an explicit unsupported adapter. DOM browser actions only
+need Playwright and Chromium; desktop actions may also require the OS's normal
+screen/input permissions. Keep scenarios local and review them before running.

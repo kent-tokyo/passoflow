@@ -131,12 +131,12 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 ### Phase 6 — Python binding and public crates
 
 - [x] Build the initial `passoflow-python` PyO3/maturin binding, exposing normalized YAML, diagnostics, execution plans, and contract errors.
-- [ ] Generate Python type stubs and provide Rust/Python examples with identical behavior.
+- [x] Generate Python type stubs and provide a Rust/Python example with identical contract behavior.
 - [ ] Publish reusable core and stable engine interfaces to crates.io.
 - [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
 - [x] Register the `passoflow` GitHub Actions Trusted Publisher configuration for the `release.yml` / `pypi` environment.
-- [ ] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.
+- [x] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.
 
 Gate: Rust users can use the core from crates.io, and Python users can use the same Rust core from a wheel without local Rust compilation.
 

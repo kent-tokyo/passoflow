@@ -26,7 +26,7 @@ and understand the result.
 
 The staged Rust migration and PassoFlow-owned replacement boundary are documented in [the Rust engine boundary](docs/rust-engine.md). The shared YAML and action-result contract is summarized in [the scenario contract](docs/scenario-contract.md). The current Python runner remains the compatibility baseline until each migration phase passes its gate.
 
-The Rust scenario contract is available to Python through the opt-in `passoflow` package (the import module is `passoflow_python`). Build it locally with `maturin develop` from `rust/crates/passoflow-python` when you need Rust-backed validation from Python.
+The Rust scenario contract is available to Python through the `passoflow` package (the import module is `passoflow_python`). Install the published wheel with `python -m pip install passoflow`, or run `maturin develop` from `rust/crates/passoflow-python` while developing. See [`examples/python_binding.py`](examples/python_binding.py) for a minimal call.
 
 ![Screenshot](images/screenshot_passoflow_01.png)
 
@@ -69,6 +69,7 @@ Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` to enable the web UI's
 | `src/api_server.py` | FastAPI backend for the web UI (scenario CRUD, streamed execution, AI features) |
 | `src/logging_config.py` | Logging setup (saves to file under `logs/` plus console output) |
 | `src/test.py` | Manual test script for checking behavior |
+| `examples/python_binding.py` | Minimal example for the Rust-backed Python binding |
 | `scenarios/*.yaml` | Scenario definition files |
 | `scenarios/images/<scenario name>/*.png` | Template images used by a scenario |
 | `logs/` | Execution logs (gitignored) |

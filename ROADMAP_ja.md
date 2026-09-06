@@ -131,12 +131,12 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 ### Phase 6 — Python bindingと公開crate
 
 - [x] PyO3/maturinの初期`passoflow-python` bindingを作り、正規化YAML、診断、execution plan、契約エラーを公開する。
-- [ ] Python型stubとRust/Pythonで同じ動作をする例を用意する。
+- [x] Python型stubとRust/Pythonで同じ契約動作をする例を用意する。
 - [ ] coreと安定したengineインターフェースをcrates.ioへ公開する。
 - [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
 - [x] `release.yml` / `pypi` environmentを使う`passoflow`向けGitHub Actions Trusted Publisher登録を完了する。
-- [ ] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。
+- [x] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。
 
 完了条件: Rust利用者はcrates.ioからcoreを使え、Python利用者はRustをローカルコンパイルせずwheelから同じcoreを使える。
 

@@ -12,3 +12,4 @@ requires-python = ">=3.9"
 module-name = "passoflow_python"
 bindings = "pyo3"
 features = ["extension-module"]
+python-source = "python"
