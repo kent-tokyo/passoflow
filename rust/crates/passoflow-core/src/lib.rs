@@ -164,6 +164,32 @@ pub struct ExecutionPlan {
     pub steps: Vec<PlannedStep>,
 }
 
+impl ExecutionPlan {
+    /// Resolve `{{variable}}` placeholders in action parameters.
+    ///
+    /// Resolution is non-mutating: the structural plan remains reusable for
+    /// retries and dry runs. Missing variables resolve to an empty string,
+    /// matching the current Python runner.
+    #[must_use]
+    pub fn resolve_variables(&self, variables: &BTreeMap<String, String>) -> Self {
+        Self {
+            contract: self.contract.clone(),
+            steps: self
+                .steps
+                .iter()
+                .map(|step| PlannedStep {
+                    params: step
+                        .params
+                        .iter()
+                        .map(|(key, value)| (key.clone(), resolve_value(value, variables)))
+                        .collect(),
+                    ..step.clone()
+                })
+                .collect(),
+        }
+    }
+}
+
 /// Versioned local event emitted by the future engine and binding adapters.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
@@ -344,6 +370,50 @@ fn collect_variable_references(value: &Value, references: &mut BTreeSet<String>)
         }
         _ => {}
     }
+}
+
+fn resolve_value(value: &Value, variables: &BTreeMap<String, String>) -> Value {
+    match value {
+        Value::String(text) => Value::String(resolve_text(text, variables)),
+        Value::Sequence(items) => Value::Sequence(
+            items
+                .iter()
+                .map(|item| resolve_value(item, variables))
+                .collect(),
+        ),
+        Value::Mapping(items) => Value::Mapping(
+            items
+                .iter()
+                .map(|(key, value)| {
+                    (
+                        resolve_value(key, variables),
+                        resolve_value(value, variables),
+                    )
+                })
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
+fn resolve_text(text: &str, variables: &BTreeMap<String, String>) -> String {
+    let mut output = String::with_capacity(text.len());
+    let mut remainder = text;
+    while let Some(start) = remainder.find("{{") {
+        output.push_str(&remainder[..start]);
+        let after_start = &remainder[start + 2..];
+        let Some(end) = after_start.find("}}") else {
+            output.push_str(&remainder[start..]);
+            break;
+        };
+        let name = after_start[..end].trim();
+        output.push_str(variables.get(name).map(String::as_str).unwrap_or_default());
+        remainder = &after_start[end + 2..];
+    }
+    if !remainder.is_empty() && !remainder.contains("{{") {
+        output.push_str(remainder);
+    }
+    output
 }
 
 fn error(code: &str, path: &str, message: &str) -> Diagnostic {
@@ -823,6 +893,8 @@ fn validate_if_blocks(steps: &[Step], diagnostics: &mut Vec<Diagnostic>) {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::{ActionOutcome, ActionResult, CONTRACT_VERSION, RunEvent, Scenario, Severity};
     use serde_yaml::Value;
 
@@ -943,6 +1015,37 @@ mod tests {
         assert_eq!(
             plan.steps[0].params["name"],
             Value::String("token".to_owned())
+        );
+    }
+
+    #[test]
+    fn resolves_nested_plan_parameters_without_mutating_the_source_plan() {
+        let scenario = Scenario::from_yaml(
+            "steps:\n  - action: send_webhook\n    url: 'https://example.test/{{ token }}'\n    payload:\n      message: 'Hello {{ name }}'\n      tags: ['{{ missing }}', fixed]\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let variables = BTreeMap::from([
+            ("token".to_owned(), "abc".to_owned()),
+            ("name".to_owned(), "PassoFlow".to_owned()),
+        ]);
+
+        let resolved = plan.resolve_variables(&variables);
+        assert_eq!(
+            resolved.steps[0].params["url"],
+            Value::String("https://example.test/abc".to_owned())
+        );
+        assert_eq!(
+            resolved.steps[0].params["payload"]["message"],
+            Value::String("Hello PassoFlow".to_owned())
+        );
+        assert_eq!(
+            resolved.steps[0].params["payload"]["tags"][0],
+            Value::String(String::new())
+        );
+        assert_eq!(
+            plan.steps[0].params["url"],
+            Value::String("https://example.test/{{ token }}".to_owned())
         );
     }
 }

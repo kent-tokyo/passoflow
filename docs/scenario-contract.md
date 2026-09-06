@@ -33,6 +33,10 @@ mapping keys are ordered by the Rust model, and parsing the normalized output
 must produce the same `Scenario`. This representation is intended for the
 Python/UI compatibility comparison; it is not a user-facing formatting rule.
 
+Execution plans can resolve `{{variable}}` placeholders without changing the
+original plan. Resolution applies recursively to strings, lists, and mappings;
+an unset variable becomes an empty string, matching the current Python runner.
+
 ## Action outcomes
 
 Every future engine action uses one of these outcomes:

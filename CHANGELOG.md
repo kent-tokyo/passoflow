@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added Python binding type stubs, a minimal usage example, and clean-wheel installation coverage.
 - Added the platform-independent Rust DOM action contract and deterministic recording backend for dry runs and previews.
 - Tightened Rust DOM navigation validation to require an HTTP(S) host and reject whitespace or control characters.
+- Added non-mutating recursive variable resolution for Rust execution-plan parameters.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed

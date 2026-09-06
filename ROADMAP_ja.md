@@ -66,6 +66,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] ステップ順序、分岐、ループ、変数参照を表すRust `ExecutionPlan`の初期境界を定義する。
 - [x] ネイティブ画像・ブラウザexecutorへアクション値を渡せるよう、正規化済みstepパラメータをplanへ含める。
 - [x] オプトインrunnerで実行前に計画とステップの整合性を確認する安全ゲートを追加する。
+- [x] planのaction parameterに対する非破壊のRust側`{{variable}}`展開を、入れ子のYAML値を含めて追加する。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 

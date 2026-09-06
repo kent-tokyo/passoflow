@@ -84,6 +84,9 @@ The same concepts are exposed by `passoflow-core` as
 - The initial Rust image executor covers `click_image` and
   `move_mouse_to_image`; the existing Python runner still executes the full
   action set.
+- `ExecutionPlan::resolve_variables` provides non-mutating, recursive
+  `{{variable}}` expansion for native executors. Unset variables resolve to an
+  empty string for compatibility with the Python runner.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.

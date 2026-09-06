@@ -66,6 +66,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Define the initial Rust `ExecutionPlan` boundary for step order, branches, loops, and variable references.
 - [x] Carry normalized step parameters in the plan so native image and browser executors receive action values.
 - [x] Consume the plan in the opt-in runner as a pre-execution step-alignment safety gate.
+- [x] Add non-mutating Rust-side `{{variable}}` resolution for planned action parameters, including nested YAML values.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 
