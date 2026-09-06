@@ -103,6 +103,9 @@ The same concepts are exposed by `passoflow-core` as
   one serialized step and state, then returns a serialized `RuntimeActionResult`.
   This moves control flow, retries, variables, and events into Rust while
   allowing the existing Python OS adapters to remain the callback implementation.
+- Runtime execution honors each step's `retry` and `retry_interval_ms` when
+  present; the function arguments provide the fallback policy for steps without
+  those fields.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.

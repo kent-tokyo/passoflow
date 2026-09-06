@@ -529,7 +529,8 @@ where
             report.status = ExecutionStatus::Stopped;
             return Ok(());
         }
-        let attempts = retry_policy.attempts.max(1);
+        let step_retry_policy = retry_policy_for_step(step, retry_policy);
+        let attempts = step_retry_policy.attempts.max(1);
         let mut final_result = None;
         for attempt in 1..=attempts {
             let resolved_step = ExecutionPlan {
@@ -551,7 +552,7 @@ where
                 final_result = Some(runtime_result);
                 break;
             }
-            sleeper.sleep(retry_policy.interval_ms);
+            sleeper.sleep(step_retry_policy.interval_ms);
         }
         let Some(runtime_result) = final_result else {
             report.status = ExecutionStatus::Stopped;
@@ -575,6 +576,22 @@ where
         index += 1;
     }
     Ok(())
+}
+
+#[allow(clippy::redundant_closure_for_method_calls)]
+fn retry_policy_for_step(step: &PlannedStep, default: RetryPolicy) -> RetryPolicy {
+    let extra_attempts = step.params.get("retry").and_then(|value| value.as_u64());
+    let interval_ms = step
+        .params
+        .get("retry_interval_ms")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(default.interval_ms);
+    RetryPolicy {
+        attempts: extra_attempts
+            .and_then(|extra| u32::try_from(extra.saturating_add(1)).ok())
+            .unwrap_or(default.attempts),
+        interval_ms,
+    }
 }
 
 fn run_steps<E, S, F>(

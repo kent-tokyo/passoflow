@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added a stateful Rust branch runner that applies adapter variable updates before later conditions.
 - Added runtime-aware fixed-count and table-row loop execution with scoped row variables.
 - Exposed the stateful Rust runner through a Python callback binding for staged runner migration.
+- Preserved step-level retry and retry-interval settings in the Rust runtime path.
 - The opt-in Python bridge now dispatches normalized action parameters from the Rust plan after a strict step-alignment check.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 

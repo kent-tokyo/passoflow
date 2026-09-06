@@ -78,6 +78,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Add a stateful Rust branch runner that re-evaluates conditions after action updates.
 - [x] Integrate fixed-count and table-row loop state into the stateful Rust runner with scoped row variables.
 - [x] Expose the stateful Rust runner through a Python callback binding while keeping OS adapters in Python.
+- [x] Preserve per-step `retry` and `retry_interval_ms` semantics in the runtime engine path.
 - [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.

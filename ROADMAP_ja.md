@@ -78,6 +78,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] action更新後に条件を再評価するstateful Rust branch runnerを追加する。
 - [x] fixed-count loopとtable row loopのstateをstateful Rust runnerへ統合し、row変数をiteration単位でスコープする。
 - [x] OS adapterをPythonに残したまま、stateful Rust runnerをPython callback bindingから利用できるようにする。
+- [x] runtime engine経路でstep単位の`retry`と`retry_interval_ms`の挙動を維持する。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
