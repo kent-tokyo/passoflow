@@ -87,6 +87,9 @@ The same concepts are exposed by `passoflow-core` as
 - `ExecutionPlan::resolve_variables` provides non-mutating, recursive
   `{{variable}}` expansion for native executors. Unset variables resolve to an
   empty string for compatibility with the Python runner.
+- `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
+  and contiguous loop ranges without evaluating conditions or invoking an OS
+  adapter.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.

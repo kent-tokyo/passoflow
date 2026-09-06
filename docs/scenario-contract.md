@@ -36,6 +36,9 @@ Python/UI compatibility comparison; it is not a user-facing formatting rule.
 Execution plans can resolve `{{variable}}` placeholders without changing the
 original plan. Resolution applies recursively to strings, lists, and mappings;
 an unset variable becomes an empty string, matching the current Python runner.
+The plan also exposes nested `if`/`else`/`endif` boundaries and contiguous loop
+ranges as a separate control-flow view; it does not evaluate conditions or
+invoke platform adapters.
 
 ## Action outcomes
 

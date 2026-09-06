@@ -164,7 +164,89 @@ pub struct ExecutionPlan {
     pub steps: Vec<PlannedStep>,
 }
 
+/// The resolved boundaries of structural control-flow blocks in a plan.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ControlFlowPlan {
+    pub branches: Vec<BranchBoundary>,
+    pub loops: Vec<LoopBoundary>,
+}
+
+/// One `if`/`else`/`endif` range using one-based plan step numbers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BranchBoundary {
+    pub if_step: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub else_step: Option<u32>,
+    pub endif_step: u32,
+}
+
+/// One contiguous loop range using one-based plan step numbers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LoopBoundary {
+    pub label: String,
+    pub start_step: u32,
+    pub end_step: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
+}
+
 impl ExecutionPlan {
+    /// Extract deterministic branch and loop ranges without evaluating them.
+    #[must_use]
+    pub fn control_flow(&self) -> ControlFlowPlan {
+        let mut branches = Vec::new();
+        let mut branch_stack: Vec<(u32, Option<u32>)> = Vec::new();
+        let mut loops = Vec::new();
+        let mut index = 0;
+        while index < self.steps.len() {
+            let step = &self.steps[index];
+            match step.action.as_str() {
+                "if" => branch_stack.push((step.index, None)),
+                "else" => {
+                    if let Some((_, else_step)) = branch_stack.last_mut() {
+                        *else_step = Some(step.index);
+                    }
+                }
+                "endif" => {
+                    if let Some((if_step, else_step)) = branch_stack.pop() {
+                        branches.push(BranchBoundary {
+                            if_step,
+                            else_step,
+                            endif_step: step.index,
+                        });
+                    }
+                }
+                _ => {}
+            }
+
+            if let Some(label) = step.loop_label.as_deref() {
+                let start_step = step.index;
+                let mut end_index = index;
+                while self
+                    .steps
+                    .get(end_index + 1)
+                    .and_then(|next| next.loop_label.as_deref())
+                    == Some(label)
+                {
+                    end_index += 1;
+                }
+                loops.push(LoopBoundary {
+                    label: label.to_owned(),
+                    start_step,
+                    end_step: self.steps[end_index].index,
+                    count: step.loop_count,
+                    table: step.loop_table.clone(),
+                });
+                index = end_index;
+            }
+            index += 1;
+        }
+        branches.sort_by_key(|branch| branch.if_step);
+        ControlFlowPlan { branches, loops }
+    }
+
     /// Resolve `{{variable}}` placeholders in action parameters.
     ///
     /// Resolution is non-mutating: the structural plan remains reusable for
@@ -895,7 +977,10 @@ fn validate_if_blocks(steps: &[Step], diagnostics: &mut Vec<Diagnostic>) {
 mod tests {
     use std::collections::BTreeMap;
 
-    use super::{ActionOutcome, ActionResult, CONTRACT_VERSION, RunEvent, Scenario, Severity};
+    use super::{
+        ActionOutcome, ActionResult, BranchBoundary, CONTRACT_VERSION, LoopBoundary, RunEvent,
+        Scenario, Severity,
+    };
     use serde_yaml::Value;
 
     #[test]
@@ -1046,6 +1131,40 @@ mod tests {
         assert_eq!(
             plan.steps[0].params["url"],
             Value::String("https://example.test/{{ token }}".to_owned())
+        );
+    }
+
+    #[test]
+    fn extracts_nested_branch_and_contiguous_loop_boundaries() {
+        let scenario = Scenario::from_yaml(
+            "steps:\n  - action: if\n    variable: ready\n  - action: wait\n    ms: 1\n  - action: if\n    variable: nested\n  - action: noop\n  - action: endif\n  - action: else\n  - action: wait\n    ms: 2\n  - action: endif\n  - action: click_image\n    images: [one.png]\n    loop: retry\n    loop_count: 3\n  - action: wait\n    ms: 1\n    loop: retry\n    loop_count: 3\n",
+        )
+        .expect("scenario should parse");
+        let control_flow = scenario.execution_plan().control_flow();
+        assert_eq!(
+            control_flow.branches,
+            vec![
+                BranchBoundary {
+                    if_step: 1,
+                    else_step: Some(6),
+                    endif_step: 8,
+                },
+                BranchBoundary {
+                    if_step: 3,
+                    else_step: None,
+                    endif_step: 5,
+                },
+            ]
+        );
+        assert_eq!(
+            control_flow.loops,
+            vec![LoopBoundary {
+                label: "retry".to_owned(),
+                start_step: 9,
+                end_step: 10,
+                count: Some(3),
+                table: None,
+            }]
         );
     }
 }
