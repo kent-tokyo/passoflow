@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "passoflow-python"
+name = "passoflow"
 version = "0.1.2"
 description = "Python bindings for PassoFlow's Rust scenario contracts"
 requires-python = ">=3.9"

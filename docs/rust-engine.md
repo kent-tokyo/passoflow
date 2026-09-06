@@ -207,7 +207,8 @@ configured scenario root. Missing files, decode errors, and paths outside that
 root are explicit failures; callers may still supply another `TemplateLoader`
 for packaged assets or test fixtures.
 
-The initial `passoflow-python` binding exposes `validate_yaml`,
+The initial `passoflow` package (`passoflow-python` Rust crate) exposes
+`validate_yaml`,
 `normalize_yaml`, and `contract_version`. `validate_yaml` returns a JSON object
 containing the contract version, validity, diagnostics, normalized YAML, and
 execution plan. It is an opt-in compatibility surface; the existing Python
