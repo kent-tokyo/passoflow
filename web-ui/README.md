@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-In another terminal, start the API with `python src/api_server.py`. On Windows, `run_webapp.bat` starts both services; on macOS, `run_webapp.command` attempts the same when backend dependencies are available. Open the URL printed by Vite.
+For the easiest Windows startup, double-click `run_webapp.bat` from the project root. It installs missing Python/Web UI dependencies, starts the API and Vite, waits for the UI, and opens the browser. For manual development, start the API with `python src/api_server.py` in one terminal and Vite with `npm run dev` in another. A packaged build with `web-ui/dist` only needs the API; it serves the built UI at port 8000.
 
 Useful checks:
 
@@ -34,4 +34,3 @@ npm run test:smoke
 - Update UI-facing strings in all three locales (`en`, `ja`, `zh`) in `src/i18n/translations.ts`.
 
 The runtime remains primarily Windows-oriented because some actions use Win32 and Excel COM. The browser editor can still be opened on macOS when its backend dependencies are available.
-

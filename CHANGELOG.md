@@ -5,16 +5,17 @@ All notable changes to PassoFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.1.1] - 2026-09-06
+## [Unreleased]
+
+### Added
+
+- Added a Windows one-click launcher that installs missing local dependencies, starts the API/UI, waits for readiness, and opens the browser.
+- Added a packaged-build launcher path that serves the built UI through FastAPI without requiring Node.js.
 
 ### Changed
 
-- Updated the minimum supported `elixcee` version to `1.0.2`.
-- Updated Python and web dependencies to the latest stable versions checked on 2026-09-06.
-- Reduced the default `click_image` indicator pause to 0.25 seconds while keeping the visible safety cue.
-- Added separate visual-browser and DOM-browser actions using the default browser and Playwright.
-
-## [Unreleased]
+- Adopted Rust Edition 2024 with Rust 1.88 as the minimum supported toolchain.
+- Fixed CI Python dependency setup and Rust Clippy coverage, including the Windows native adapter.
 
 ## [0.1.2] - 2026-09-06
 
@@ -118,6 +119,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added a deterministic normalized-YAML round-trip regression for future Python/Rust compatibility checks.
 - Failed or stopped runs now retain failed-step before/after screenshots when screen capture is available.
 - Failure artifact log lines now link to the affected step and offer a guarded one-step rerun.
+
+## [0.1.1] - 2026-09-06
+
+### Changed
+
+- Updated the minimum supported `elixcee` version to `1.0.2`.
+- Updated Python and web dependencies to the latest stable versions checked on 2026-09-06.
+- Reduced the default `click_image` indicator pause to 0.25 seconds while keeping the visible safety cue.
+- Added separate visual-browser and DOM-browser actions using the default browser and Playwright.
 
 ## [0.1.0] - 2026-09-06
 
