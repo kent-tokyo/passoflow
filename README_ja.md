@@ -21,6 +21,8 @@ Rust移行の段階と、PyAutoGUIに依存しないPassoFlow独自実装の境�
 
 [English version here](README.md) | [CHANGELOG](CHANGELOG.md) | [SECURITY](SECURITY.md)
 
+ライセンスは [MIT](LICENSE-MIT) または [Apache-2.0](LICENSE-APACHE) です。
+
 ![スクリーンショット](images/screenshot_passoflow_01.png)
 
 ## まず使ってみる

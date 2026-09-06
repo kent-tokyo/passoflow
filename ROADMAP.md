@@ -40,7 +40,7 @@ All public layers share typed concepts: `Scenario`, `Step`, `Action`, `Diagnosti
 
 - [ ] Freeze the YAML schema, reserved keys, action names, and three-state action outcome contract.
 - [x] Define the versioned Rust/JSON event protocol for the engine, Python binding, and local UI.
-- [ ] Add license metadata once the repository's intended license is confirmed.
+- [x] Add MIT OR Apache-2.0 license metadata and preserve the copyright holder name.
 - [x] Add a Rust workspace, MSRV policy, and CI matrix without changing the current runner.
 - [x] List every PyAutoGUI capability currently used and define its PassoFlow-owned replacement interface.
 

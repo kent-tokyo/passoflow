@@ -16,6 +16,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "Rust engine components for PassoFlow local automation"
 repository = "https://github.com/kent-tokyo/passoflow"
+license = "MIT OR Apache-2.0"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

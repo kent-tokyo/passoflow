@@ -40,7 +40,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 
 - [ ] YAMLスキーマ、予約キー、アクション名、3状態のアクション結果契約を固定する。
 - [x] engine、Python binding、ローカルUI間のバージョン付きRust/JSONイベント仕様を定義する。
-- [ ] リポジトリの正式なライセンスが確定したらライセンス情報を追加する。
+- [x] MIT OR Apache-2.0のライセンス情報を追加し、著作権者名を残す。
 - [x] 現行runnerを変更せず、Rust workspace、MSRV方針、CIマトリクスを追加する。
 - [x] 現在PyAutoGUIが担う機能を全て列挙し、PassoFlow独自の置換インターフェースを定義する。
 
