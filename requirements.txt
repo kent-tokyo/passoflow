@@ -1,0 +1,15 @@
+anthropic==1.4.0
+elixcee==1.0.2
+fastapi==0.141.1
+Markdown==3.10.3
+opencv-python-headless==5.0.0.93
+playwright==1.62.0
+Pillow==12.3.0
+pyautogui==0.9.54
+pygetwindow==0.0.9
+pyperclip==1.11.0
+pywin32==312
+python-dotenv==1.2.3
+python-multipart==0.0.32
+PyYAML==6.0.3
+uvicorn==0.52.4

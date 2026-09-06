@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+logs/
+web-ui/node_modules/
+web-ui/dist/
+web-ui/*.log
