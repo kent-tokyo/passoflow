@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Connected selected Rust control-flow steps to the engine's retry, stop, and event path.
 - Added Rust-compatible runtime branch-condition evaluation for variables and `last_step`.
 - Added isolated runtime table-row expansion for Rust execution-plan loops.
+- Added the engine API for executing resolved table-loop steps with shared outcomes.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed

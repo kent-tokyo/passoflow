@@ -72,6 +72,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] selectorを互換性のある`passoflow-engine::run_selected`実行経路へ接続し、既存と共通のretry・停止・event処理を利用する。
 - [x] 変数のtruthiness、scalar equality、`last_step`分岐条件をRust互換で評価する処理を定義する。
 - [x] Rust selectorで実行時table行を受け取り、展開したloop iteration間の行変数を分離する。
+- [x] `passoflow-engine::run_selected_with_tables`を公開し、解決済みtable loop stepを共通のretry・停止・event処理で実行できるようにする。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 

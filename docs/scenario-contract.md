@@ -44,6 +44,8 @@ fixed-count loops into an executable step sequence. Table-backed loops return a
 runtime-data error until their rows are supplied by the engine.
 `passoflow-engine::run_selected` executes that selected sequence with the same
 retry, stop, and event contract as the existing linear runner.
+`run_selected_with_tables` provides the same engine path when table rows are
+needed for loop expansion.
 Callers with table data can use `select_steps_with_tables`; each row is applied
 to a loop body's parameters in isolation, and missing table data remains a
 fail-closed error.

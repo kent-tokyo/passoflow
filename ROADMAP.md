@@ -72,6 +72,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Connect the selector to a compatible `passoflow-engine::run_selected` execution path with shared retry, stop, and event behavior.
 - [x] Define Rust-compatible evaluation for variable truthiness, scalar equality, and `last_step` branch conditions.
 - [x] Accept runtime table rows in the Rust selector and isolate row variables across expanded loop iterations.
+- [x] Expose `passoflow-engine::run_selected_with_tables` so resolved table-loop steps use shared retry, stop, and event handling.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 

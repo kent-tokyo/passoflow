@@ -129,7 +129,44 @@ where
     S: RetrySleeper,
     F: FnMut() -> bool,
 {
-    let selected = plan.select_steps(branch_decisions)?;
+    run_selected_with_tables(
+        plan,
+        branch_decisions,
+        &BTreeMap::new(),
+        executor,
+        sleeper,
+        run_id,
+        retry_policy,
+        stop_requested,
+    )
+}
+
+/// Select branches and loops using runtime table rows, then execute the result.
+///
+/// Each table row is resolved into its loop body before the shared engine path
+/// runs it. Missing branch decisions and table data fail closed.
+///
+/// # Errors
+///
+/// Returns an error when selection cannot be completed, the plan contract is
+/// incompatible, or an adapter cannot return a result.
+#[allow(clippy::too_many_arguments)]
+pub fn run_selected_with_tables<E, S, F>(
+    plan: &ExecutionPlan,
+    branch_decisions: &BTreeMap<u32, bool>,
+    tables: &BTreeMap<String, Vec<BTreeMap<String, String>>>,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: StepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    let selected = plan.select_steps_with_tables(branch_decisions, tables)?;
     let steps: Vec<PlannedStep> = selected
         .into_iter()
         .map(|selected_step| selected_step.step)
@@ -233,7 +270,10 @@ fn event(run_id: &str, step: &PlannedStep, result: &ActionResult, attempt: u32) 
 mod tests {
     use std::collections::BTreeMap;
 
-    use super::{ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run, run_selected};
+    use super::{
+        ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run, run_selected,
+        run_selected_with_tables,
+    };
     use passoflow_core::{
         ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
     };
@@ -395,5 +435,47 @@ mod tests {
         assert_eq!(report.events[0].step, 4);
         assert_eq!(report.events[1].step, 6);
         assert_eq!(report.events[2].step, 6);
+    }
+
+    #[test]
+    fn run_selected_with_tables_executes_each_resolved_row() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: type_text\n    text: '{{ name }}'\n    loop: people\n    loop_table: rows\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let tables = BTreeMap::from([(
+            "rows".to_owned(),
+            vec![
+                BTreeMap::from([("name".to_owned(), "Ada".to_owned())]),
+                BTreeMap::from([("name".to_owned(), "Grace".to_owned())]),
+            ],
+        )]);
+        let mut executor = FakeExecutor {
+            results: vec![
+                result(ActionOutcome::Success, "typed Ada"),
+                result(ActionOutcome::Success, "typed Grace"),
+            ],
+            calls: 0,
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_selected_with_tables(
+            &plan,
+            &BTreeMap::new(),
+            &tables,
+            &mut executor,
+            &mut sleeper,
+            "run-table",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("table run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(report.events.len(), 2);
+        assert_eq!(executor.calls, 2);
     }
 }
