@@ -327,7 +327,7 @@ def set_excel_cell_value(path: str, cell: str, value: str, sheet: str | None = N
 def save_excel_file(path: str) -> None:
     """Re-saves an existing .xlsx in place via elixcee, which needs no Excel install.
 
-    See https://github.com/kent-tokyo/elixcee. Requires elixcee>=1.0.2.
+    See https://github.com/kent-tokyo/elixcee. Requires elixcee>=1.0.3.
     """
     try:
         vm = elixcee.load_workbook(path)

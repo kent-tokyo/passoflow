@@ -1,5 +1,5 @@
 anthropic==1.4.0
-elixcee==1.0.2
+elixcee==1.0.3
 fastapi==0.141.1
 Markdown==3.10.3
 opencv-python-headless==5.0.0.93
