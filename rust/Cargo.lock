@@ -214,6 +214,7 @@ name = "passoflow-python"
 version = "0.1.2"
 dependencies = [
  "passoflow-core",
+ "passoflow-engine",
  "pyo3",
  "serde_json",
 ]

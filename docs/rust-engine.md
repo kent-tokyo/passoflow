@@ -24,7 +24,7 @@ compatibility baseline until each phase passes its gate.
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |
 | `passoflow-capture` | RGBA frames, regions, cropping, Windows GDI capture and diagnostics | Windows initial adapter implemented |
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
-| `passoflow-python` | PyO3 binding for validation, normalization, and plans | 0.1.2 crate published; PyPI wheel publication remains open |
+| `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.2 crate published; PyPI wheel publication remains open |
 | `passoflow-web` | DOM operation contract and recording backend | Initial boundary implemented |
 | `passoflow-server` | Future Rust local API compatible with the React editor | Planned |
 
@@ -98,6 +98,11 @@ The same concepts are exposed by `passoflow-core` as
   adapter can return variable updates, and the next `if` is evaluated against
   the updated state. Fixed-count and table-row loops are supported; table-row
   variables are scoped to each iteration and restored afterward.
+- The Python binding exposes `run_runtime_state(yaml, variables_json,
+  tables_json, callback, run_id, attempts, interval_ms)`. The callback receives
+  one serialized step and state, then returns a serialized `RuntimeActionResult`.
+  This moves control flow, retries, variables, and events into Rust while
+  allowing the existing Python OS adapters to remain the callback implementation.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
