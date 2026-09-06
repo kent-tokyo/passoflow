@@ -47,9 +47,53 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
 
+  package-smoke:
+    name: Verify distributable artifacts
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-ubuntu-latest
+          path: wheel
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-distribution
+          path: sdist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install and import Linux wheel in a clean environment
+        shell: bash
+        run: |
+          python -m venv wheel-venv
+          wheel-venv/bin/python -m pip install --quiet --no-deps wheel/*.whl
+          wheel-venv/bin/python - <<'PY'
+          import json
+          import passoflow_python
+
+          assert passoflow_python.__version__
+          assert passoflow_python.contract_version() == "0.1"
+          result = json.loads(passoflow_python.validate_yaml("title: Smoke\nsteps: []\n"))
+          assert result["valid"] is True
+          PY
+      - name: Check source distribution contents
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import tarfile
+
+          archive = glob.glob("sdist/*.tar.gz")[0]
+          with tarfile.open(archive) as package:
+              names = package.getnames()
+          assert any(name.endswith("/README.md") for name in names)
+          assert any(name.endswith("/python/passoflow_python/__init__.pyi") for name in names)
+          PY
+
   publish:
     name: Publish to PyPI
-    needs: [wheels, sdist]
+    needs: [wheels, sdist, package-smoke]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
