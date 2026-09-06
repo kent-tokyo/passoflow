@@ -95,6 +95,8 @@ The same concepts are exposed by `passoflow-core` as
   boundary, and missing branch decisions fail closed.
 - `passoflow-engine::run_selected` now executes the selected sequence while
   preserving the existing retry, stop, and versioned event behavior.
+- `evaluate_branch_condition` provides the Rust-side compatibility rule for
+  variable truthiness, scalar equality, and `last_step` state checks.
 - `passoflow-web` validates `http`/`https` navigation, non-empty CSS
   selectors, and positive wait timeouts before dispatch. Its recording backend
   provides deterministic dry-run evidence; it does not open a browser yet.

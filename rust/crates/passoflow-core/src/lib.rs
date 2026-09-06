@@ -213,6 +213,70 @@ pub enum ControlFlowError {
     },
     #[error("fixed loop '{label}' has invalid count {count:?}")]
     InvalidLoopCount { label: String, count: Option<i64> },
+    #[error("if step {0} has an unsupported condition shape")]
+    InvalidBranchCondition(u32),
+}
+
+/// The outcome state used by a following `if: last_step` condition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LastStepState {
+    None,
+    Ok,
+    Warned,
+    Failed,
+}
+
+/// Evaluate one planned `if` step against runtime state.
+///
+/// An unset variable is treated as an empty string. With no `equals` value,
+/// the variable condition is true only for a non-empty value, matching the
+/// current Python runner.
+///
+/// # Errors
+///
+/// Returns an error when the step does not contain one supported condition.
+pub fn evaluate_branch_condition(
+    step: &PlannedStep,
+    variables: &BTreeMap<String, String>,
+    last_step: LastStepState,
+) -> Result<bool, ControlFlowError> {
+    if step.action != "if" {
+        return Err(ControlFlowError::InvalidBranchCondition(step.index));
+    }
+    if let Some(expected_state) = step.params.get("last_step").and_then(Value::as_str) {
+        return Ok(last_step
+            == match expected_state {
+                "ok" => LastStepState::Ok,
+                "warned" => LastStepState::Warned,
+                "failed" => LastStepState::Failed,
+                _ => return Err(ControlFlowError::InvalidBranchCondition(step.index)),
+            });
+    }
+    let Some(variable) = step.params.get("variable").and_then(Value::as_str) else {
+        return Err(ControlFlowError::InvalidBranchCondition(step.index));
+    };
+    let value = variables
+        .get(variable)
+        .map(String::as_str)
+        .unwrap_or_default();
+    if let Some(expected) = step.params.get("equals") {
+        return Ok(value == scalar_string(expected).as_str());
+    }
+    Ok(!value.is_empty())
+}
+
+fn scalar_string(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::Bool(value) => value.to_string(),
+        Value::Number(value) => value.to_string(),
+        Value::String(value) => value.clone(),
+        other => serde_yaml::to_string(other)
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
+    }
 }
 
 impl ExecutionPlan {
@@ -1146,7 +1210,7 @@ mod tests {
 
     use super::{
         ActionOutcome, ActionResult, BranchBoundary, CONTRACT_VERSION, ControlFlowError,
-        LoopBoundary, RunEvent, Scenario, Severity,
+        LastStepState, LoopBoundary, RunEvent, Scenario, Severity, evaluate_branch_condition,
     };
     use serde_yaml::Value;
 
@@ -1362,6 +1426,36 @@ mod tests {
         assert_eq!(
             plan.select_steps(&BTreeMap::new()),
             Err(ControlFlowError::MissingBranchDecision(1))
+        );
+    }
+
+    #[test]
+    fn evaluates_variable_and_last_step_conditions_compatibly() {
+        let scenario = Scenario::from_yaml(
+            "steps:\n  - action: if\n    variable: count\n    equals: 2\n  - action: if\n    variable: ready\n  - action: if\n    last_step: warned\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+        let variables = BTreeMap::from([
+            ("count".to_owned(), "2".to_owned()),
+            ("ready".to_owned(), "yes".to_owned()),
+        ]);
+
+        assert!(
+            evaluate_branch_condition(&plan.steps[0], &variables, LastStepState::None,)
+                .expect("equals condition should evaluate")
+        );
+        assert!(
+            evaluate_branch_condition(&plan.steps[1], &variables, LastStepState::None,)
+                .expect("truthy condition should evaluate")
+        );
+        assert!(
+            evaluate_branch_condition(&plan.steps[2], &variables, LastStepState::Warned,)
+                .expect("last-step condition should evaluate")
+        );
+        assert!(
+            !evaluate_branch_condition(&plan.steps[2], &variables, LastStepState::Ok,)
+                .expect("last-step condition should evaluate")
         );
     }
 }

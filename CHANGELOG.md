@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added deterministic branch-boundary and contiguous-loop metadata to Rust execution plans.
 - Added a fail-closed Rust selector for chosen branches and fixed-count loops.
 - Connected selected Rust control-flow steps to the engine's retry, stop, and event path.
+- Added Rust-compatible runtime branch-condition evaluation for variables and `last_step`.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
 ### Changed
