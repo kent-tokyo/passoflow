@@ -133,6 +133,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [ ] Python型stubとRust/Pythonで同じ動作をする例を用意する。
 - [ ] coreと安定したengineインターフェースをcrates.ioへ公開する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
+- [x] `release.yml` / `pypi` environmentを使う`passoflow`向けGitHub Actions Trusted Publisher登録を完了する。
 - [ ] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。
 
 完了条件: Rust利用者はcrates.ioからcoreを使え、Python利用者はRustをローカルコンパイルせずwheelから同じcoreを使える。

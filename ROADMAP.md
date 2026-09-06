@@ -133,6 +133,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [ ] Generate Python type stubs and provide Rust/Python examples with identical behavior.
 - [ ] Publish reusable core and stable engine interfaces to crates.io.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
+- [x] Register the `passoflow` GitHub Actions Trusted Publisher configuration for the `release.yml` / `pypi` environment.
 - [ ] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.
 
 Gate: Rust users can use the core from crates.io, and Python users can use the same Rust core from a wheel without local Rust compilation.
