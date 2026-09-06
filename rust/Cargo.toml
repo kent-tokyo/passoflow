@@ -12,7 +12,7 @@ members = [
 [workspace.package]
 version = "0.1.2"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "Rust engine components for PassoFlow local automation"
 repository = "https://github.com/kent-tokyo/passoflow"
 
@@ -22,3 +22,4 @@ unsafe_code = "deny"
 [workspace.lints.clippy]
 all = "warn"
 pedantic = "warn"
+collapsible_if = "allow"
