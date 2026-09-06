@@ -75,6 +75,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] `passoflow-engine::run_selected_with_tables`を公開し、解決済みtable loop stepを共通のretry・停止・event処理で実行できるようにする。
 - [x] engine実行前に変数と`last_step`から分岐判定を生成するruntime snapshot facadeを追加する。
 - [x] action parameterをdispatchする前に、runtime snapshotの変数をRust engine内で解決する。
+- [x] action更新後に条件を再評価するstateful Rust branch runnerを追加する。dynamic loopは安全側で未対応とする。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。

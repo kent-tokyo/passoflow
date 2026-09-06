@@ -34,6 +34,14 @@ pub struct RunReport {
     pub events: Vec<RunEvent>,
 }
 
+/// Result of a runtime-aware action, including variable updates for later steps.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeActionResult {
+    pub result: ActionResult,
+    #[serde(default)]
+    pub variables: BTreeMap<String, String>,
+}
+
 /// Action adapter called by the engine after plan validation.
 pub trait StepExecutor {
     /// Execute one planned step.
@@ -43,6 +51,27 @@ pub trait StepExecutor {
     /// shared result contract; this method only fails for an unavailable
     /// adapter or an internal adapter error.
     fn execute(&mut self, step: &PlannedStep) -> Result<ActionResult, EngineError>;
+}
+
+/// Runtime-aware adapter used when later conditions depend on earlier actions.
+pub trait RuntimeStepExecutor {
+    /// Execute one planned step using the current immutable state snapshot.
+    /// # Errors
+    ///
+    /// Returns an error when the adapter cannot execute the action.
+    fn execute_runtime(
+        &mut self,
+        step: &PlannedStep,
+        state: &RuntimeState,
+    ) -> Result<RuntimeActionResult, EngineError>;
+}
+
+/// Mutable state owned by the engine between runtime-aware steps.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeState {
+    #[serde(default)]
+    pub variables: BTreeMap<String, String>,
+    pub last_step: LastStepState,
 }
 
 /// Injectable wait boundary so retry tests never need real sleeps.
@@ -68,6 +97,8 @@ pub enum EngineError {
     Adapter(String),
     #[error("control-flow selection failed: {0}")]
     ControlFlow(#[from] ControlFlowError),
+    #[error("dynamic control flow does not support loop steps yet (step {step})")]
+    UnsupportedDynamicLoop { step: u32 },
 }
 
 /// Execute a validated plan with deterministic retry and stop semantics.
@@ -224,6 +255,177 @@ where
     )
 }
 
+/// Execute branch conditions against state updated after every action.
+///
+/// This is the stateful bridge for scenarios whose `if` conditions depend on
+/// earlier actions. Structural markers are handled by the engine and are not
+/// dispatched to the adapter. Loop steps are rejected until their iteration
+/// state can be represented by the same runtime boundary.
+///
+/// # Errors
+///
+/// Returns an error when the plan contract is incompatible, a branch condition
+/// is invalid, a loop is present, or an adapter operation fails.
+pub fn run_with_runtime_state<E, S, F>(
+    plan: &ExecutionPlan,
+    variables: BTreeMap<String, String>,
+    executor: &mut E,
+    sleeper: &mut S,
+    run_id: impl Into<String>,
+    retry_policy: RetryPolicy,
+    stop_requested: F,
+) -> Result<RunReport, EngineError>
+where
+    E: RuntimeStepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    if plan.contract != CONTRACT_VERSION {
+        return Err(EngineError::UnsupportedContract {
+            actual: plan.contract.clone(),
+            expected: CONTRACT_VERSION.to_owned(),
+        });
+    }
+    if let Some(step) = plan.steps.iter().find(|step| step.loop_label.is_some()) {
+        return Err(EngineError::UnsupportedDynamicLoop { step: step.index });
+    }
+    let mut report = RunReport {
+        run_id: run_id.into(),
+        status: ExecutionStatus::Success,
+        completed_steps: 0,
+        events: Vec::new(),
+    };
+    let mut state = RuntimeState {
+        variables,
+        last_step: LastStepState::None,
+    };
+    let mut stop_requested = stop_requested;
+    run_dynamic_range(
+        plan,
+        0,
+        plan.steps.len(),
+        &mut state,
+        executor,
+        sleeper,
+        &mut report,
+        retry_policy,
+        &mut stop_requested,
+    )?;
+    Ok(report)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_dynamic_range<E, S, F>(
+    plan: &ExecutionPlan,
+    start: usize,
+    end: usize,
+    state: &mut RuntimeState,
+    executor: &mut E,
+    sleeper: &mut S,
+    report: &mut RunReport,
+    retry_policy: RetryPolicy,
+    stop_requested: &mut F,
+) -> Result<(), EngineError>
+where
+    E: RuntimeStepExecutor,
+    S: RetrySleeper,
+    F: FnMut() -> bool,
+{
+    let boundaries = plan.control_flow();
+    let branches: BTreeMap<_, _> = boundaries
+        .branches
+        .into_iter()
+        .map(|boundary| (boundary.if_step, boundary))
+        .collect();
+    let mut index = start;
+    while index < end {
+        let step = &plan.steps[index];
+        if step.action == "if" {
+            let boundary = branches
+                .get(&step.index)
+                .expect("validated plan must contain an if boundary");
+            let take_true =
+                passoflow_core::evaluate_branch_condition(step, &state.variables, state.last_step)?;
+            let branch_start = if take_true {
+                index + 1
+            } else {
+                boundary
+                    .else_step
+                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+            };
+            let branch_end = if take_true {
+                boundary
+                    .else_step
+                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+            } else {
+                boundary.endif_step as usize
+            };
+            run_dynamic_range(
+                plan,
+                branch_start,
+                branch_end,
+                state,
+                executor,
+                sleeper,
+                report,
+                retry_policy,
+                stop_requested,
+            )?;
+            if report.status == ExecutionStatus::Stopped
+                || report.status == ExecutionStatus::FailureStop
+            {
+                return Ok(());
+            }
+            index = boundary.endif_step as usize;
+            continue;
+        }
+        if step.action == "else" || step.action == "endif" {
+            index += 1;
+            continue;
+        }
+        if stop_requested() {
+            report.status = ExecutionStatus::Stopped;
+            return Ok(());
+        }
+        let attempts = retry_policy.attempts.max(1);
+        let mut final_result = None;
+        for attempt in 1..=attempts {
+            let runtime_result = executor.execute_runtime(step, state)?;
+            let should_retry =
+                runtime_result.result.outcome == ActionOutcome::FailureStop && attempt < attempts;
+            report
+                .events
+                .push(event(&report.run_id, step, &runtime_result.result, attempt));
+            if !should_retry {
+                final_result = Some(runtime_result);
+                break;
+            }
+            sleeper.sleep(retry_policy.interval_ms);
+        }
+        let Some(runtime_result) = final_result else {
+            report.status = ExecutionStatus::Stopped;
+            return Ok(());
+        };
+        state.variables.extend(runtime_result.variables);
+        state.last_step = match runtime_result.result.outcome {
+            ActionOutcome::Success => LastStepState::Ok,
+            ActionOutcome::WarningContinue => LastStepState::Warned,
+            ActionOutcome::FailureStop => LastStepState::Failed,
+        };
+        report.completed_steps = step.index;
+        match runtime_result.result.outcome {
+            ActionOutcome::Success => {}
+            ActionOutcome::WarningContinue => report.status = ExecutionStatus::WarningContinue,
+            ActionOutcome::FailureStop => {
+                report.status = ExecutionStatus::FailureStop;
+                return Ok(());
+            }
+        }
+        index += 1;
+    }
+    Ok(())
+}
+
 fn run_steps<E, S, F>(
     steps: &[PlannedStep],
     contract: &str,
@@ -313,8 +515,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::{
-        ExecutionStatus, NoopSleeper, RetrySleeper, StepExecutor, run, run_selected,
-        run_selected_with_tables, run_with_runtime_snapshot,
+        ExecutionStatus, NoopSleeper, RetrySleeper, RuntimeActionResult, RuntimeState,
+        RuntimeStepExecutor, StepExecutor, run, run_selected, run_selected_with_tables,
+        run_with_runtime_snapshot, run_with_runtime_state,
     };
     use passoflow_core::{
         ActionOutcome, ActionResult, CONTRACT_VERSION, ExecutionPlan, PlannedStep, RetryPolicy,
@@ -323,6 +526,42 @@ mod tests {
     struct FakeExecutor {
         results: Vec<ActionResult>,
         calls: usize,
+    }
+
+    struct RuntimeFakeExecutor {
+        calls: Vec<u32>,
+        action_state: Option<RuntimeState>,
+    }
+
+    impl RuntimeStepExecutor for RuntimeFakeExecutor {
+        fn execute_runtime(
+            &mut self,
+            step: &PlannedStep,
+            state: &RuntimeState,
+        ) -> Result<RuntimeActionResult, super::EngineError> {
+            self.calls.push(step.index);
+            self.action_state = Some(state.clone());
+            let variables = if step.action == "set_variable" {
+                BTreeMap::from([(
+                    step.params
+                        .get("name")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or_default()
+                        .to_owned(),
+                    step.params
+                        .get("value")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or_default()
+                        .to_owned(),
+                )])
+            } else {
+                BTreeMap::new()
+            };
+            Ok(RuntimeActionResult {
+                result: result(ActionOutcome::Success, "ok"),
+                variables,
+            })
+        }
     }
 
     impl StepExecutor for FakeExecutor {
@@ -593,5 +832,43 @@ mod tests {
 
         assert_eq!(report.status, ExecutionStatus::Success);
         assert_eq!(executor.text.as_deref(), Some("Hello Ada"));
+    }
+
+    #[test]
+    fn runtime_state_rechecks_branch_after_variable_update() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: set_variable\n    name: ready\n    value: yes\n  - action: if\n    variable: ready\n  - action: type_text\n    text: success\n  - action: else\n  - action: type_text\n    text: fallback\n  - action: endif\n",
+        )
+        .expect("scenario should parse");
+        let mut executor = RuntimeFakeExecutor {
+            calls: Vec::new(),
+            action_state: None,
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run_with_runtime_state(
+            &scenario.execution_plan(),
+            BTreeMap::new(),
+            &mut executor,
+            &mut sleeper,
+            "run-dynamic",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("dynamic run should succeed");
+
+        assert_eq!(report.status, ExecutionStatus::Success);
+        assert_eq!(executor.calls, vec![1, 3]);
+        assert_eq!(
+            executor
+                .action_state
+                .expect("if should receive state")
+                .variables
+                .get("ready")
+                .map(String::as_str),
+            Some("yes")
+        );
     }
 }

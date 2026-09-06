@@ -94,6 +94,10 @@ The same concepts are exposed by `passoflow-core` as
 - `run_with_runtime_snapshot` applies that resolution inside the engine before
   branch selection and action dispatch, so one snapshot governs both decisions
   and parameters.
+- `run_with_runtime_state` is the stateful branch boundary: a runtime-aware
+  adapter can return variable updates, and the next `if` is evaluated against
+  the updated state. Plans containing loops are rejected until iteration state
+  is integrated into this boundary.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
