@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sys
+import threading
 import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -1903,6 +1904,16 @@ def _write_scenario(path: Path, title: str, steps: list[dict[str, Any]]) -> None
 _active_runs: dict[str, dict[str, Any]] = {}
 
 
+def _force_kill_process(process: asyncio.subprocess.Process) -> None:
+    """Terminate a process that did not honor a cooperative stop in time."""
+    if process.returncode is not None:
+        return
+    try:
+        process.kill()
+    except ProcessLookupError:
+        pass
+
+
 def _classify_run_outcome(returncode: int, stop_requested: bool, warning_lines: list[str]) -> str:
     if stop_requested:
         return "stopped"
@@ -1988,8 +1999,7 @@ def start_run(filename: str, start: int | None = None, end: int | None = None) -
 
 @app.post("/api/runs/{run_id}/stop")
 def stop_run(run_id: str) -> dict[str, str]:
-    """Kill the subprocess for an in-progress run. The WebSocket loop then sees stdout close,
-    reports the run as done with the process's (non-zero) exit code, and cleans up as usual."""
+    """Request graceful stop, with a delayed kill fallback for an unresponsive process."""
     run_info = _active_runs.get(run_id)
     if run_info is None:
         raise HTTPException(status_code=404, detail="Run not found (already finished or invalid run_id)")
@@ -2000,7 +2010,10 @@ def stop_run(run_id: str) -> dict[str, str]:
     if stop_file is not None:
         stop_file.parent.mkdir(parents=True, exist_ok=True)
         stop_file.write_text("stop\n", encoding="utf-8")
-    run_info["process"].kill()
+    timer = threading.Timer(2.0, _force_kill_process, args=(run_info["process"],))
+    timer.daemon = True
+    run_info["stop_timer"] = timer
+    timer.start()
     return {"status": "stopping"}
 
 
@@ -2126,6 +2139,9 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        stop_timer = run_info.get("stop_timer")
+        if stop_timer is not None:
+            stop_timer.cancel()
         if process.returncode is None:
             process.kill()
         stop_file = run_info.get("stop_file")

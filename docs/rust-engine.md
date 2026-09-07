@@ -115,8 +115,8 @@ The same concepts are exposed by `passoflow-core` as
   returns step screenshot paths as failure artifacts when a run id is present.
 - The Python runner logs those returned artifact paths, so the existing Web UI
   stream receives them alongside the Rust event message. Cooperative stop
-  propagation is now available at step boundaries; the API retains kill as a
-  fallback for the current subprocess lifecycle.
+  propagation is available at step boundaries; the API waits two seconds for
+  graceful completion before using kill as a fallback.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.

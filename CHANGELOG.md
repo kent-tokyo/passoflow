@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.
+- Changed API stop handling to wait for graceful completion before the delayed kill fallback.
 - The opt-in Python bridge now dispatches normalized action parameters from the Rust plan after a strict step-alignment check.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 
