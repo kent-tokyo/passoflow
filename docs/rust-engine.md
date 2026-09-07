@@ -82,6 +82,8 @@ The same concepts are exposed by `passoflow-core` as
   flow are evaluated by the stateful Rust engine.
 - Strict alignment includes action parameters, so a plan with stale values is
   rejected before dispatch.
+- Malformed plan steps and parameter containers are also rejected with an
+  explicit alignment error rather than leaking a parsing exception.
 - The callback bridge rejects unknown actions explicitly before dispatch, even
   if a caller bypasses the normal validator.
 - Callback results are parsed as the complete typed `RuntimeActionResult`;

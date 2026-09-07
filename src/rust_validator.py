@@ -158,9 +158,15 @@ def assert_plan_matches_steps(plan: dict[str, Any], steps: list[dict[str, Any]])
             f"planned {len(planned_steps)} steps, loaded {len(steps)}"
         )
     for index, (planned, step) in enumerate(zip(planned_steps, steps, strict=True), start=1):
-        if planned["index"] != index or planned["action"] != step.get("action"):
+        if (
+            not isinstance(planned, dict)
+            or planned.get("index") != index
+            or planned.get("action") != step.get("action")
+        ):
             raise RuntimeError(f"Rust execution plan does not match loaded step {index}")
         planned_params = planned.get("params")
+        if planned_params is not None and not isinstance(planned_params, dict):
+            raise RuntimeError(f"Rust execution plan has malformed parameters for step {index}")
         if planned_params is not None:
             loaded_params = {key: value for key, value in step.items() if key != "action"}
             if planned_params != loaded_params:

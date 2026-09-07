@@ -92,6 +92,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 後続stepが成功した場合もwarning statusとstep-attempt event順序が維持されることを検証する。
 - [x] Rust engineが実行継続する前に、不正または不完全なPython callback結果を拒否する。
 - [x] plan作成後にloaded stepのparameterが変化した場合、古いRust planをdispatchせず拒否する。
+- [x] Rust planのstep自体が壊れている場合も、明示的なalignment errorでfail-closedにする。
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。

@@ -119,6 +119,15 @@ class RustValidatorBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "parameters"):
             assert_plan_matches_steps(plan, [{"action": "browser_click", "selector": "#new"}])
 
+    def test_plan_alignment_fails_closed_on_malformed_step(self):
+        with self.assertRaisesRegex(RuntimeError, "does not match"):
+            assert_plan_matches_steps({"contract": "0.1", "steps": [{}]}, [{"action": "wait"}])
+        with self.assertRaisesRegex(RuntimeError, "malformed parameters"):
+            assert_plan_matches_steps(
+                {"contract": "0.1", "steps": [{"index": 1, "action": "wait", "params": []}]},
+                [{"action": "wait"}],
+            )
+
     def test_materializes_python_steps_from_normalized_rust_parameters(self):
         plan = {
             "contract": "0.1",
