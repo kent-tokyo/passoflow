@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exposed the stateful Rust runner through a Python callback binding for staged runner migration.
 - Preserved step-level retry and retry-interval settings in the Rust runtime path.
 - Added an opt-in Python runner path that dispatches compatible root actions through the Rust engine callback bridge.
+- Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - The opt-in Python bridge now dispatches normalized action parameters from the Rust plan after a strict step-alignment check.
 - Updated the runtime dependency on `elixcee` to `1.0.3`.
 

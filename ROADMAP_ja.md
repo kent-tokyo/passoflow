@@ -80,7 +80,8 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] OS adapterをPythonに残したまま、stateful Rust runnerをPython callback bindingから利用できるようにする。
 - [x] runtime engine経路でstep単位の`retry`と`retry_interval_ms`の挙動を維持する。
 - [x] Rust engine callback bridgeを通じてcompatibleなroot actionをdispatchするオプトインPython runner経路を追加する。
-- [ ] Rust-backed runner経路でlive progress、停止要求、完全なfailure artifactを維持する。
+- [x] Rust-backed runner経路でlive progress markerとstep前後のscreenshot artifactを維持する。
+- [ ] Rust-backed runner経路で協調的な停止要求と完全なfailure artifact handoffを維持する。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
 - [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。

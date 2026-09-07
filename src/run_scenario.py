@@ -77,6 +77,7 @@ VARIABLE_PATTERN = re.compile(r"\{\{(.+?)\}\}")
 logger = logging.getLogger(__name__)
 
 RUN_ID: str | None = None
+RUST_ENGINE_TOTAL: int | None = None
 
 # Outcome contract: actions normally succeed or stop on an unexpected exception. These
 # actions have a documented, recoverable warning path that lets the scenario continue.
@@ -141,10 +142,10 @@ def _capture_step_screenshot() -> object | None:
         return None
 
 
-def _save_failure_context(before: object | None, step_number: int, action: str) -> None:
+def _save_failure_context(before: object | None, step_number: int, action: str) -> list[str]:
     """Save before/after images for one failed step without masking the failure."""
     if before is None or not RUN_ID:
-        return
+        return []
     try:
         after = pyautogui.screenshot()
         prefix = app_root() / "logs" / f"run_{RUN_ID}_step_{step_number}_{action}"
@@ -152,8 +153,10 @@ def _save_failure_context(before: object | None, step_number: int, action: str) 
         before.save(f"{prefix}_before.png")
         after.save(f"{prefix}_after.png")
         logger.error("Failure screenshots saved for step %d: %s_before.png and %s_after.png", step_number, prefix, prefix)
+        return [f"{prefix}_before.png", f"{prefix}_after.png"]
     except Exception as error:
         logger.warning("Could not save before/after screenshots for step %d: %s", step_number, error)
+        return []
 
 
 def _run_set_variable(step: dict, variables: dict[str, str]) -> None:
@@ -433,23 +436,34 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
     action = step.get("action")
     if not isinstance(action, str) or action in {"if", "else", "endif"}:
         raise ValueError(f"Rust runtime callback received structural action: {action!r}")
+    step_number = int(step.get("index", 0))
+    if RUST_ENGINE_TOTAL:
+        print(f"@@PROGRESS@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
+        overlay.set_step_label(f"Step {step_number}/{RUST_ENGINE_TOTAL}: {step.get('title') or step.get('note') or action}")
     warning_handler = _StepWarningHandler()
     logging.getLogger().addHandler(warning_handler)
     before_screenshot = _capture_step_screenshot() if RUN_ID else None
     try:
         ACTIONS[action](step, variables)
     except Exception as error:
-        step_number = step.get("index", 0)
-        _save_failure_context(before_screenshot, int(step_number), action)
+        artifact_paths = _save_failure_context(before_screenshot, step_number, action)
         return json.dumps(
             {
-                "result": {"outcome": "failure_stop", "message": str(error), "artifacts": []},
+                "result": {
+                    "outcome": "failure_stop",
+                    "message": str(error),
+                    "artifacts": [
+                        {"kind": "step_screenshot", "path": path} for path in artifact_paths
+                    ],
+                },
                 "variables": variables,
             }
         )
     finally:
         logging.getLogger().removeHandler(warning_handler)
     outcome = "warning_continue" if warning_handler.warned else "success"
+    if RUST_ENGINE_TOTAL:
+        print(f"@@COMPLETED@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
     return json.dumps(
         {
             "result": {"outcome": outcome, "message": action, "artifacts": []},
@@ -470,15 +484,20 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
         raise RuntimeError(
             "PASSOFLOW_USE_RUST_ENGINE=1 requires the passoflow Python binding; install the wheel or build it with maturin"
         ) from error
-    report_json = passoflow_python.run_runtime_state(
-        Path(yaml_path).read_text(encoding="utf-8"),
-        "{}",
-        "{}",
-        _rust_runtime_callback,
-        run_id or "run",
-        1,
-        0,
-    )
+    global RUST_ENGINE_TOTAL
+    RUST_ENGINE_TOTAL = len(steps)
+    try:
+        report_json = passoflow_python.run_runtime_state(
+            Path(yaml_path).read_text(encoding="utf-8"),
+            "{}",
+            "{}",
+            _rust_runtime_callback,
+            run_id or "run",
+            1,
+            0,
+        )
+    finally:
+        RUST_ENGINE_TOTAL = None
     report = json.loads(report_json)
     for event in report.get("events", []):
         logger.info("Rust engine step %s: %s", event.get("step"), event.get("message"))
