@@ -189,6 +189,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Add a publishable `passoflow` umbrella crate that re-exports the stable core contract.
 - [x] Publish `passoflow` 0.1.2 to crates.io using the guarded GitHub Actions workflow.
 - [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
+- [x] Guard Rust publishing workflows with VERSION/Cargo metadata preflight checks.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
 - [x] Build the 0.1.2 wheel locally and verify its exported API in a clean virtual environment.
 - [x] Run a live Chromium CDP smoke test from the clean wheel for navigation, waiting, selector preview, and click.

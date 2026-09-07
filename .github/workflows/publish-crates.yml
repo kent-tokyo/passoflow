@@ -9,8 +9,24 @@ permissions:
   contents: read
 
 jobs:
+  version-preflight:
+    name: Check Rust crate version metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify VERSION and Cargo metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          test -n "$version"
+          grep -qx "version = \"$version\"" rust/Cargo.toml
+          grep -qx "version = \"$version\"" rust/crates/passoflow-core/Cargo.toml
+          grep -qx "version = \"$version\"" rust/crates/passoflow-python/Cargo.toml
+
   publish:
     name: Publish passoflow-core and passoflow-python
+    needs: version-preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -188,6 +188,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 安定したcore契約を再exportする公開可能な`passoflow` umbrella crateを追加する。
 - [x] 保護されたGitHub Actions workflowを使い、`passoflow` 0.1.2をcrates.ioへ公開する。
 - [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
+- [x] Rust publish workflowにVERSION/Cargo metadataの事前検証を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
 - [x] 0.1.2 wheelをローカルビルドし、クリーンな仮想環境で公開APIを検証する。
 - [x] クリーンwheelから実Chromium CDPへ接続し、遷移、待機、セレクタプレビュー、クリックのsmoke testを実行する。

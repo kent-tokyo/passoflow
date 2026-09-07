@@ -7,8 +7,23 @@ permissions:
   contents: read
 
 jobs:
+  version-preflight:
+    name: Check umbrella version metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify VERSION and Cargo metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          test -n "$version"
+          grep -qx "version = \"$version\"" rust/Cargo.toml
+          grep -qx "version = \"$version\"" rust/crates/passoflow/Cargo.toml
+
   publish:
     name: Publish passoflow
+    needs: version-preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
