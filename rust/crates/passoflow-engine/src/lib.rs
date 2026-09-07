@@ -830,6 +830,44 @@ mod tests {
     }
 
     #[test]
+    fn preserves_warning_status_and_event_order_until_later_success() {
+        let mut executor = FakeExecutor {
+            results: vec![
+                result(ActionOutcome::WarningContinue, "window not confirmed"),
+                result(ActionOutcome::Success, "clicked"),
+            ],
+            calls: 0,
+        };
+        let mut sleeper = NoopSleeper;
+        let report = run(
+            &ExecutionPlan {
+                contract: CONTRACT_VERSION.to_owned(),
+                steps: vec![
+                    plan().steps[0].clone(),
+                    PlannedStep {
+                        index: 2,
+                        ..plan().steps[0].clone()
+                    },
+                ],
+            },
+            &mut executor,
+            &mut sleeper,
+            "run-warning-then-success",
+            RetryPolicy {
+                attempts: 1,
+                interval_ms: 0,
+            },
+            || false,
+        )
+        .expect("run should succeed");
+        assert_eq!(report.status, ExecutionStatus::WarningContinue);
+        assert_eq!(report.completed_steps, 2);
+        assert_eq!(report.events.len(), 2);
+        assert_eq!(report.events[0].outcome, ActionOutcome::WarningContinue);
+        assert_eq!(report.events[1].outcome, ActionOutcome::Success);
+    }
+
+    #[test]
     fn stop_request_prevents_execution() {
         let mut executor = FakeExecutor {
             results: vec![result(ActionOutcome::Success, "unused")],
