@@ -141,6 +141,85 @@ pub trait CdpTransport {
     fn command(&mut self, method: &str, params: Value) -> Result<Value, BrowserError>;
 }
 
+/// Minimal text wire needed by a production WebSocket implementation.
+pub trait CdpWire {
+    /// Send one CDP text frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the frame cannot be sent.
+    fn send_text(&mut self, payload: &str) -> Result<(), BrowserError>;
+    /// Receive one CDP text frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the frame cannot be received.
+    fn receive_text(&mut self) -> Result<String, BrowserError>;
+}
+
+/// JSON CDP transport with request/response correlation.
+///
+/// The wire is injected so the protocol can be tested without a browser. A
+/// later WebSocket adapter only needs to implement [`CdpWire`].
+#[derive(Debug)]
+pub struct JsonCdpTransport<W> {
+    wire: W,
+    next_id: u64,
+}
+
+impl<W> JsonCdpTransport<W> {
+    /// Create a transport whose first command has CDP id 1.
+    #[must_use]
+    pub fn new(wire: W) -> Self {
+        Self { wire, next_id: 1 }
+    }
+
+    /// Return the underlying wire after execution or inspection.
+    #[must_use]
+    pub fn into_wire(self) -> W {
+        self.wire
+    }
+}
+
+impl<W: CdpWire> CdpTransport for JsonCdpTransport<W> {
+    fn command(&mut self, method: &str, params: Value) -> Result<Value, BrowserError> {
+        let id = self.next_id;
+        self.next_id = self.next_id.checked_add(1).ok_or_else(|| {
+            BrowserError::BackendUnavailable("CDP command id exhausted".to_owned())
+        })?;
+        let payload = serde_json::to_string(&json!({
+            "id": id,
+            "method": method,
+            "params": params,
+        }))
+        .map_err(|error| {
+            BrowserError::BackendUnavailable(format!("encode CDP command: {error}"))
+        })?;
+        self.wire.send_text(&payload)?;
+
+        loop {
+            let raw = self.wire.receive_text()?;
+            let response: Value = serde_json::from_str(&raw).map_err(|error| {
+                BrowserError::BackendUnavailable(format!("decode CDP response: {error}"))
+            })?;
+            let Some(response_id) = response.get("id").and_then(Value::as_u64) else {
+                continue;
+            };
+            if response_id != id {
+                return Err(BrowserError::BackendUnavailable(format!(
+                    "unexpected CDP response id {response_id}, expected {id}"
+                )));
+            }
+            if let Some(error) = response.get("error") {
+                return Err(BrowserError::BackendUnavailable(format!(
+                    "CDP command {method} failed: {error}"
+                )));
+            }
+            return Ok(response);
+        }
+    }
+}
+
 /// Rust-owned DOM backend that emits CDP commands through an injected transport.
 #[derive(Debug)]
 pub struct CdpBrowser<T> {
@@ -389,8 +468,8 @@ pub fn execute<B: BrowserBackend>(
 #[cfg(test)]
 mod tests {
     use super::{
-        BrowserAction, BrowserBackend, BrowserError, CdpBrowser, CdpTransport, RecordingBrowser,
-        WaitState, execute,
+        BrowserAction, BrowserBackend, BrowserError, CdpBrowser, CdpTransport, CdpWire,
+        JsonCdpTransport, RecordingBrowser, WaitState, execute,
     };
     use serde_json::{Value, json};
 
@@ -546,5 +625,69 @@ mod tests {
         );
         assert!(transport.commands[1].1["expression"].as_str().is_some());
         assert_eq!(transport.commands[0].1["url"], "https://example.test");
+    }
+
+    #[derive(Debug, Default)]
+    struct RecordingWire {
+        sent: Vec<String>,
+        responses: Vec<String>,
+    }
+
+    impl CdpWire for RecordingWire {
+        fn send_text(&mut self, payload: &str) -> Result<(), BrowserError> {
+            self.sent.push(payload.to_owned());
+            Ok(())
+        }
+
+        fn receive_text(&mut self) -> Result<String, BrowserError> {
+            if self.responses.is_empty() {
+                return Err(BrowserError::BackendUnavailable(
+                    "test wire ran out of responses".to_owned(),
+                ));
+            }
+            Ok(self.responses.remove(0))
+        }
+    }
+
+    #[test]
+    fn correlates_json_cdp_responses_and_ignores_events() {
+        let wire = RecordingWire {
+            responses: vec![
+                r#"{"method":"Page.loadEventFired"}"#.to_owned(),
+                r#"{"id":1,"result":{"ok":true}}"#.to_owned(),
+            ],
+            ..RecordingWire::default()
+        };
+        let mut transport = JsonCdpTransport::new(wire);
+        let response = transport
+            .command("Page.enable", json!({}))
+            .expect("matching response");
+        assert_eq!(response["result"]["ok"], true);
+        let wire = transport.into_wire();
+        assert_eq!(wire.sent.len(), 1);
+        let command: Value = serde_json::from_str(&wire.sent[0]).expect("valid command");
+        assert_eq!(command["id"], 1);
+        assert_eq!(command["method"], "Page.enable");
+    }
+
+    #[test]
+    fn fails_closed_on_cdp_error_or_mismatched_response() {
+        let mut transport = JsonCdpTransport::new(RecordingWire {
+            responses: vec![r#"{"id":1,"error":{"code":-1,"message":"nope"}}"#.to_owned()],
+            ..RecordingWire::default()
+        });
+        assert!(matches!(
+            transport.command("Page.enable", json!({})),
+            Err(BrowserError::BackendUnavailable(message)) if message.contains("failed")
+        ));
+
+        let mut transport = JsonCdpTransport::new(RecordingWire {
+            responses: vec![r#"{"id":99,"result":{}}"#.to_owned()],
+            ..RecordingWire::default()
+        });
+        assert!(matches!(
+            transport.command("Page.enable", json!({})),
+            Err(BrowserError::BackendUnavailable(message)) if message.contains("expected 1")
+        ));
     }
 }

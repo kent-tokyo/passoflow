@@ -138,6 +138,7 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 - [x] Define a platform-independent DOM action boundary with selector/URL/timeout safety checks and a recording backend.
 - [x] Map normalized Rust execution-plan steps into typed DOM actions before backend dispatch.
 - [x] Prototype a Rust Chromium adapter boundary using injected CDP commands for navigation and DOM operations.
+- [x] Define a correlated JSON CDP transport boundary that is independent of the wire implementation.
 - [ ] Select and integrate a production Rust WebSocket/CDP transport.
 - [ ] Port navigation, click, fill, wait, selector preview, and selector recovery diagnostics.
 - [x] Implement the initial `passoflow-engine` execution boundary with retries, safety stop semantics, and structured events.

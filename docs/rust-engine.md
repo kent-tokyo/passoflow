@@ -95,6 +95,10 @@ The same concepts are exposed by `passoflow-core` as
   It emits `Page.navigate` and `Runtime.evaluate` commands for navigation,
   click, fill, and selector-state waits. A production WebSocket transport is
   intentionally a separate follow-up so the command contract remains testable.
+- `JsonCdpTransport` now owns CDP command IDs, ignores protocol events, and
+  fails closed on malformed, failed, or mismatched responses. A concrete
+  WebSocket client only needs to implement the small `CdpWire` text-frame
+  boundary.
 - `ExecutionPlan::resolve_variables` provides non-mutating, recursive
   `{{variable}}` expansion for native executors. Unset variables resolve to an
   empty string for compatibility with the Python runner.
