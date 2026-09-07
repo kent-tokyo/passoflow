@@ -98,6 +98,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] guarded再実行の範囲を統一検証し、不正なrangeをdispatch前に拒否する。
 - [x] Web UIへeventを渡す前にRust runtime reportのstatusとevent形状を検証する。
 - [x] table読み込みやaction dispatchの前に、展開済みRust actionを事前検証する。
+- [x] Python validationとRust展開でsymlinkにも対応したscenario root path policyを共通適用する。
 - [x] run-levelの`stopped` statusとaction eventのoutcomeを分離して検証する。
 - [x] runtime report境界でstep番号に見せかけたboolean値を拒否する。
 - [x] 公開wheelのsmoke testでwarning contract APIのexportを必須検証する。

@@ -17,6 +17,7 @@ from app_paths import app_root
 from run_range import resolve_run_range
 from rust_action_coverage import unsupported_actions
 from runtime_report import validate_runtime_report
+from scenario_paths import resolve_scenario_path
 from action_contract import action_outcome_contract
 from input_actions import (
     activate_window,
@@ -718,11 +719,11 @@ def _collect_rust_nested_sources(yaml_path: str | Path, steps: list[dict]) -> di
         target = step.get("path")
         if not isinstance(target, str):
             continue
-        nested_path = (SCENARIOS_DIR / target).resolve()
         try:
+            nested_path = resolve_scenario_path(SCENARIOS_DIR, target)
             key = nested_path.relative_to(SCENARIOS_DIR.resolve()).as_posix()
         except ValueError as error:
-            raise ValueError(f"nested scenario path escapes the scenarios directory: {target}") from error
+            raise ValueError(str(error)) from error
         if key in sources:
             continue
         source = nested_path.read_text(encoding="utf-8")
@@ -1052,7 +1053,11 @@ def _validate_scenario(yaml_path: str | Path, _ancestors: set[Path] | None = Non
         _validate_step(step, label, errors, warnings)
 
         if isinstance(step, dict) and step.get("action") in ("call_scenario", "repeat") and "path" in step:
-            nested_path = SCENARIOS_DIR / step["path"]
+            try:
+                nested_path = resolve_scenario_path(SCENARIOS_DIR, step["path"])
+            except ValueError as error:
+                errors.append(f"{label}: {error}")
+                continue
             if not nested_path.is_file():
                 errors.append(f"{label}: {step['action']} path not found: {step['path']}")
             else:

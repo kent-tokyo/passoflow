@@ -89,6 +89,8 @@ The same concepts are exposed by `passoflow-core` as
 - The Rust-backed runner also preflights the complete expanded step list before
   loading tables or dispatching any action, so unsupported actions cannot cause
   a partially executed run.
+- Nested scenario paths are resolved under the scenario root with symlink-aware
+  traversal checks before validation or Rust bundle loading.
 - Callback results are parsed as the complete typed `RuntimeActionResult`;
   malformed JSON or missing outcome fields fail closed as an adapter error.
 - Callback warnings use the same action outcome contract as the Python runner:
