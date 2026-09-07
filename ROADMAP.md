@@ -108,7 +108,7 @@ Gate: existing scenarios validate and run without observable schema regression.
 - [ ] Implement platform adapters directly against supported OS APIs; do not wrap PyAutoGUI, Enigo, or another automation library.
 - [ ] Define coordinate spaces, display scaling, multi-monitor behavior, keyboard layouts, and permission diagnostics.
 - [x] Add a small standalone dry-run input test tool and portable safety tests.
-- [ ] Keep the red click indicator and fail-safe behavior as PassoFlow-owned features.
+- [x] Keep the red click indicator and fail-safe behavior as PassoFlow-owned features; reuse the persistent overlay window so the visible marker does not pay Tk startup/teardown cost per click.
 
 Gate: basic input actions work on the stated platform matrix with explicit permission and coordinate failures.
 

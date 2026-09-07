@@ -37,7 +37,7 @@ compatibility baseline until each phase passes its gate.
 | Screen/window capture and crop | `CaptureBackend` and Windows GDI adapter |
 | Template search, confidence, regions, anchors | `passoflow-vision` |
 | Failure screenshots | Capture backend plus local failure-artifact policy |
-| Red click indicator and fail-safe checks | PassoFlow input/overlay policy |
+| Red click indicator and fail-safe checks | PassoFlow input/overlay policy; the persistent overlay reuses one marker window |
 
 The Python implementation remains active while equivalent Rust behavior is
 verified. Removing `pyautogui` from runtime dependencies is a later Phase 3/4

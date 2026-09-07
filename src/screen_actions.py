@@ -173,19 +173,25 @@ def move_mouse_to_image(
 
 
 def _show_click_overlay(x: int, y: int, size: int = OVERLAY_SIZE, duration: float = OVERLAY_DURATION) -> None:
-    """Briefly flash a red circle at (x, y) so the click location is visible."""
-    root = tk.Tk()
-    root.overrideredirect(True)
-    root.attributes("-topmost", True)
-    root.attributes("-transparentcolor", "white")
-    root.geometry(f"{size}x{size}+{x - size // 2}+{y - size // 2}")
+    """Briefly flash a red circle without rebuilding Tk for every click."""
+    # The persistent overlay owns the Tk event loop used during normal scenario runs.
+    # Keeping this import local preserves the standalone screen-actions module contract.
+    try:
+        from overlay import overlay
 
-    canvas = tk.Canvas(root, width=size, height=size, bg="white", highlightthickness=0)
-    canvas.pack()
-    canvas.create_oval(2, 2, size - 2, size - 2, outline="red", width=3)
-
-    root.after(int(duration * 1000), root.destroy)
-    root.mainloop()
+        overlay.show_click_indicator(x, y, duration)
+    except (ImportError, RuntimeError, tk.TclError):
+        # Keep direct callers usable when the persistent overlay cannot be started.
+        root = tk.Tk()
+        root.overrideredirect(True)
+        root.attributes("-topmost", True)
+        root.attributes("-transparentcolor", "white")
+        root.geometry(f"{size}x{size}+{x - size // 2}+{y - size // 2}")
+        canvas = tk.Canvas(root, width=size, height=size, bg="white", highlightthickness=0)
+        canvas.pack()
+        canvas.create_oval(2, 2, size - 2, size - 2, outline="red", width=3)
+        root.after(int(duration * 1000), root.destroy)
+        root.mainloop()
 
 
 def click_image(

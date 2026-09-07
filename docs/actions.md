@@ -185,7 +185,7 @@ In the web UI, `key`/`keys` fields can also be filled by pressing the actual key
 | `target_window_title` | none | Optional fail-closed safety check. Before searching, the foreground window title must contain this text; use it when a wrong-window click would be costly |
 | `retry` | `0` | Number of additional attempts if the image isn't found right away. `0` (default) means try once and give up, matching the previous behavior |
 | `retry_interval_ms` | `500` | Milliseconds to wait between attempts. Only relevant when `retry` is greater than 0; you don't need to set this just to set `retry` |
-| `click_indicator_duration` | `0.25` | Seconds to show the red click indicator before a `click_image` action. Set to `0` to disable it; increase it when recording or debugging |
+| `click_indicator_duration` | `0.25` | Seconds to show the red click indicator before a `click_image` action. The existing overlay window is reused between clicks, so the marker remains visible without per-click Tk startup cost. Set to `0` to disable it; increase it when recording or debugging |
 
 Actions that take `images` try each candidate in order, useful when the same UI element looks different depending on state (background color, text color, etc.). When `retry` is set on one of these actions, a retry re-tries the whole candidate list from the top, not just the last candidate that failed.
 

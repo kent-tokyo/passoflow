@@ -31,6 +31,8 @@ _HUD_FG = "white"
 _HUD_FONT = ("Yu Gothic UI", 11)
 _HUD_PAD_X = 10
 _HUD_PAD_Y = 6
+_INDICATOR_SIZE = 30
+_INDICATOR_COLOR = "red"
 
 _GWL_EXSTYLE = -20
 _WS_EX_LAYERED = 0x80000
@@ -73,7 +75,7 @@ def _refresh_layered(win: tk.Toplevel) -> None:
         logger.warning("Could not refresh overlay window: %s", e)
 
 
-def _refresh_colorkey(win: tk.Toplevel) -> None:
+def _refresh_colorkey(win: tk.Toplevel, colorref: int = 0) -> None:
     """Re-apply the border window's colorkey transparency after _make_click_through runs.
     Tk's -transparentcolor attribute keeps the colorkey in sync on its own across ordinary
     geometry/content redraws, but the raw SetWindowLongW call in _make_click_through resets
@@ -83,7 +85,7 @@ def _refresh_colorkey(win: tk.Toplevel) -> None:
     Empirically confirmed on this Windows build."""
     try:
         hwnd = win.winfo_id()
-        _user32.SetLayeredWindowAttributes(hwnd, 0, 0, _LWA_COLORKEY)
+        _user32.SetLayeredWindowAttributes(hwnd, colorref, 0, _LWA_COLORKEY)
     except OSError as e:
         logger.warning("Could not refresh overlay window colorkey: %s", e)
 
@@ -117,6 +119,8 @@ class Overlay:
         self._hud_font: tkfont.Font | None = None
         self._hud_size: tuple[int, int] = (0, 0)
         self._last_fg_hwnd: int | None = None
+        self._indicator_win: tk.Toplevel | None = None
+        self._indicator_token = 0
 
     def _ensure_started(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -171,11 +175,15 @@ class Overlay:
             self._set_outline(payload)
         elif command == "step":
             self._set_step_label(payload)
+        elif command == "indicator":
+            self._show_indicator(*payload)
         elif command == "stop":
             if self._border_win:
                 self._border_win.destroy()
             if self._hud_win:
                 self._hud_win.destroy()
+            if self._indicator_win:
+                self._indicator_win.destroy()
             self._root.quit()
 
     def _hud_text_size(self, text: str) -> tuple[int, int]:
@@ -266,6 +274,46 @@ class Overlay:
             self._root.update_idletasks()
             _refresh_layered(self._hud_win)
 
+    def _show_indicator(self, x: int, y: int, duration: float, done: threading.Event) -> None:
+        """Reuse one Tk window for the marker while keeping display synchronous."""
+        if self._indicator_win is None:
+            win = tk.Toplevel(self._root)
+            win.overrideredirect(True)
+            win.attributes("-topmost", True)
+            win.attributes("-transparentcolor", "white")
+            canvas = tk.Canvas(
+                win,
+                width=_INDICATOR_SIZE,
+                height=_INDICATOR_SIZE,
+                bg="white",
+                highlightthickness=0,
+            )
+            canvas.pack()
+            canvas.create_oval(
+                2,
+                2,
+                _INDICATOR_SIZE - 2,
+                _INDICATOR_SIZE - 2,
+                outline=_INDICATOR_COLOR,
+                width=3,
+            )
+            self._indicator_win = win
+            self._root.update()
+            _make_click_through(win)
+            _refresh_colorkey(win, 0xFFFFFF)
+        win = self._indicator_win
+        win.geometry(f"{_INDICATOR_SIZE}x{_INDICATOR_SIZE}+{x - _INDICATOR_SIZE // 2}+{y - _INDICATOR_SIZE // 2}")
+        win.deiconify()
+        self._indicator_token += 1
+        token = self._indicator_token
+
+        def finish() -> None:
+            if self._indicator_token == token:
+                win.withdraw()
+                done.set()
+
+        self._root.after(max(1, int(duration * 1000)), finish)
+
     def _position_hud(self) -> None:
         win = self._hud_win
         width, height = self._hud_size
@@ -289,6 +337,16 @@ class Overlay:
         """Show (or update) the step-name HUD in a screen corner."""
         self._ensure_started()
         self._queue.put(("step", text))
+
+    def show_click_indicator(self, x: int, y: int, duration: float) -> None:
+        """Show the reusable click marker synchronously for ``duration`` seconds."""
+        if duration <= 0:
+            return
+        self._ensure_started()
+        done = threading.Event()
+        self._queue.put(("indicator", (x, y, duration, done)))
+        # A failed overlay thread must not make an automation run hang forever.
+        done.wait(timeout=max(1.0, duration + 1.0))
 
     def clear(self) -> None:
         """Hide both overlays, e.g. when a run ends, without stopping the background thread."""
