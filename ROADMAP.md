@@ -137,7 +137,8 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 - [x] Implement the initial platform-independent `passoflow-engine` runner with retries, warning continuation, failure stop, stop requests, and versioned step-attempt events.
 - [x] Define a platform-independent DOM action boundary with selector/URL/timeout safety checks and a recording backend.
 - [x] Map normalized Rust execution-plan steps into typed DOM actions before backend dispatch.
-- [ ] Select and prototype a Rust Chromium adapter using CDP or a maintained Playwright-compatible client.
+- [x] Prototype a Rust Chromium adapter boundary using injected CDP commands for navigation and DOM operations.
+- [ ] Select and integrate a production Rust WebSocket/CDP transport.
 - [ ] Port navigation, click, fill, wait, selector preview, and selector recovery diagnostics.
 - [x] Implement the initial `passoflow-engine` execution boundary with retries, safety stop semantics, and structured events.
 - [x] Add the initial Rust `click_image` `StepExecutor` with injected template loading and capture/search/click policy.

@@ -137,7 +137,8 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] リトライ、警告継続、失敗停止、停止要求、バージョン付きstep-attemptイベントを扱う、OS非依存の`passoflow-engine`初期runnerを実装する。
 - [x] セレクタ・URL・timeoutの安全性検証と記録backendを備えた、OS非依存のDOMアクション境界を定義する。
 - [x] 正規化済みRust execution planのstepをbackend dispatch前にtyped DOM actionへ変換する。
-- [ ] CDPまたは保守されたRustクライアントによるChromiumアダプタを選定・試作する。
+- [x] CDP commandを注入するRust Chromium adapter境界を試作し、遷移とDOM操作を生成する。
+- [ ] 本番用Rust WebSocket/CDP transportを選定・統合する。
 - [ ] 遷移、クリック、入力、待機、セレクタプレビュー、復旧診断を移植する。
 - [x] リトライ、安全停止、構造化イベントを扱う`passoflow-engine`初期実行境界を実装する。
 - [x] template読み込みを注入でき、capture/search/clickポリシーを使うRust `click_image`初期`StepExecutor`を追加する。

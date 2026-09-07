@@ -8,6 +8,7 @@
 
 use passoflow_core::PlannedStep;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use thiserror::Error;
 
 /// The state a selector must reach before a wait operation completes.
@@ -129,6 +130,118 @@ pub trait BrowserBackend {
         state: WaitState,
         timeout_ms: u64,
     ) -> Result<(), BrowserError>;
+}
+
+/// Transport boundary for a Chromium `DevTools` Protocol connection.
+pub trait CdpTransport {
+    /// Send one CDP command and return its decoded result object.
+    /// # Errors
+    ///
+    /// Returns a backend error when the transport or CDP command fails.
+    fn command(&mut self, method: &str, params: Value) -> Result<Value, BrowserError>;
+}
+
+/// Rust-owned DOM backend that emits CDP commands through an injected transport.
+#[derive(Debug)]
+pub struct CdpBrowser<T> {
+    transport: T,
+    poll_interval_ms: u64,
+}
+
+impl<T> CdpBrowser<T> {
+    /// Create a CDP browser backend with a short, deterministic wait poll interval.
+    #[must_use]
+    pub fn new(transport: T) -> Self {
+        Self {
+            transport,
+            poll_interval_ms: 25,
+        }
+    }
+
+    /// Return the injected transport after execution or inspection.
+    #[must_use]
+    pub fn into_transport(self) -> T {
+        self.transport
+    }
+}
+
+impl<T: CdpTransport> BrowserBackend for CdpBrowser<T> {
+    fn navigate(&mut self, url: &str) -> Result<(), BrowserError> {
+        self.transport
+            .command("Page.navigate", json!({"url": url}))?;
+        Ok(())
+    }
+
+    fn click(&mut self, selector: &str) -> Result<(), BrowserError> {
+        let selector = json_string(selector);
+        self.evaluate(&format!(
+            "(() => {{ const e = document.querySelector({selector}); if (!e) return false; e.click(); return true; }})()"
+        ))?;
+        Ok(())
+    }
+
+    fn fill(&mut self, selector: &str, text: &str) -> Result<(), BrowserError> {
+        let selector = json_string(selector);
+        let text = json_string(text);
+        self.evaluate(&format!(
+            "(() => {{ const e = document.querySelector({selector}); if (!e) return false; e.focus(); e.value = {text}; e.dispatchEvent(new Event('input', {{bubbles:true}})); e.dispatchEvent(new Event('change', {{bubbles:true}})); return true; }})()"
+        ))?;
+        Ok(())
+    }
+
+    fn wait_for(
+        &mut self,
+        selector: &str,
+        state: WaitState,
+        timeout_ms: u64,
+    ) -> Result<(), BrowserError> {
+        let deadline = std::time::Instant::now()
+            .checked_add(std::time::Duration::from_millis(timeout_ms))
+            .ok_or(BrowserError::InvalidTimeout)?;
+        let selector = json_string(selector);
+        let expression = match state {
+            WaitState::Attached => format!("!!document.querySelector({selector})"),
+            WaitState::Detached => format!("!document.querySelector({selector})"),
+            WaitState::Visible => format!(
+                "(() => {{ const e = document.querySelector({selector}); return !!e && !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length); }})()"
+            ),
+            WaitState::Hidden => format!(
+                "(() => {{ const e = document.querySelector({selector}); return !e || !(e.offsetWidth || e.offsetHeight || e.getClientRects().length); }})()"
+            ),
+        };
+        loop {
+            if self.evaluate(&expression)? {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(BrowserError::BackendUnavailable(format!(
+                    "selector did not reach state {state:?} before timeout"
+                )));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(self.poll_interval_ms));
+        }
+    }
+}
+
+impl<T: CdpTransport> CdpBrowser<T> {
+    fn evaluate(&mut self, expression: &str) -> Result<bool, BrowserError> {
+        let result = self.transport.command(
+            "Runtime.evaluate",
+            json!({"expression": expression, "returnByValue": true}),
+        )?;
+        result
+            .pointer("/result/result/value")
+            .and_then(Value::as_bool)
+            .ok_or_else(|| {
+                BrowserError::BackendUnavailable(
+                    "CDP evaluation returned no boolean value".to_owned(),
+                )
+            })
+    }
+}
+
+fn json_string(value: &str) -> String {
+    serde_json::to_string(value).expect("serializing a string cannot fail")
 }
 
 /// Deterministic backend for tests, dry runs, and future UI previews.
@@ -276,8 +389,10 @@ pub fn execute<B: BrowserBackend>(
 #[cfg(test)]
 mod tests {
     use super::{
-        BrowserAction, BrowserBackend, BrowserError, RecordingBrowser, WaitState, execute,
+        BrowserAction, BrowserBackend, BrowserError, CdpBrowser, CdpTransport, RecordingBrowser,
+        WaitState, execute,
     };
+    use serde_json::{Value, json};
 
     #[test]
     fn records_valid_dom_operations_in_order() {
@@ -387,5 +502,49 @@ mod tests {
             BrowserAction::from_planned_step(&scenario.execution_plan().steps[0]),
             Err(BrowserError::InvalidWaitState("eventually".to_owned()))
         );
+    }
+
+    #[derive(Debug, Default)]
+    struct RecordingCdp {
+        commands: Vec<(String, Value)>,
+    }
+
+    impl CdpTransport for RecordingCdp {
+        fn command(&mut self, method: &str, params: Value) -> Result<Value, BrowserError> {
+            self.commands.push((method.to_owned(), params));
+            if method == "Runtime.evaluate" {
+                Ok(json!({"result": {"result": {"value": true}}}))
+            } else {
+                Ok(json!({}))
+            }
+        }
+    }
+
+    #[test]
+    fn emits_safe_cdp_commands_for_dom_operations() {
+        let mut browser = CdpBrowser::new(RecordingCdp::default());
+        browser.navigate("https://example.test").expect("navigate");
+        browser.click("#submit").expect("click");
+        browser.fill("#name", "Ada").expect("fill");
+        browser
+            .wait_for("#result", WaitState::Visible, 100)
+            .expect("wait");
+        let transport = browser.into_transport();
+
+        assert_eq!(
+            transport
+                .commands
+                .iter()
+                .map(|(method, _)| method.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "Page.navigate",
+                "Runtime.evaluate",
+                "Runtime.evaluate",
+                "Runtime.evaluate"
+            ]
+        );
+        assert!(transport.commands[1].1["expression"].as_str().is_some());
+        assert_eq!(transport.commands[0].1["url"], "https://example.test");
     }
 }
