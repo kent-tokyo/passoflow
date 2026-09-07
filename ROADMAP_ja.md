@@ -87,7 +87,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
-- [ ] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
+- [x] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 
 完了条件: 既存シナリオをスキーマ上の差異なく検証・実行できる。

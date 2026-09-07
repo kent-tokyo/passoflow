@@ -79,7 +79,7 @@ The same concepts are exposed by `passoflow-core` as
 - When both settings are enabled, the runner also dispatches normalized action
   parameters from the Rust plan after strict step alignment. Python action
   functions remain the runtime adapter; variable mutation and dynamic control
-  flow are not delegated yet.
+  flow are evaluated by the stateful Rust engine.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.
@@ -184,9 +184,9 @@ input to the operating system.
 ## Open gates
 
 The remaining migration work is validating the WebSocket adapter against a live
-Chromium endpoint, moving variable and control-flow execution behind the Rust
-engine, a local Rust-compatible API, platform wheels, runtime permission
-guidance, and PyPI installation verification. `passoflow`, `passoflow-core`,
+Chromium endpoint, replacing the remaining Python orchestration around nested
+scenario expansion and table preloading, a local Rust-compatible API, platform
+wheels, and PyPI installation verification. `passoflow`, `passoflow-core`,
 and the `passoflow-python` crate are published; the Python wheel remains open.
 See the
 [roadmap](../ROADMAP.md) for the phase order and completion criteria.
