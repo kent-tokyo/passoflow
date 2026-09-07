@@ -28,7 +28,7 @@ Licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE).
 
 The staged Rust migration and PassoFlow-owned replacement boundary are documented in [the Rust engine boundary](docs/rust-engine.md). The shared YAML and action-result contract is summarized in [the scenario contract](docs/scenario-contract.md). The current Python runner remains the compatibility baseline until each migration phase passes its gate.
 
-The Rust scenario contract is available to Python through the `passoflow` package (the import module is `passoflow_python`). Install the published wheel with `python -m pip install passoflow`, or run `maturin develop` from `rust/crates/passoflow-python` while developing. The binding also exposes `DomBrowser` for direct local Chromium CDP operations; see [`rust/crates/passoflow-python/README.md`](rust/crates/passoflow-python/README.md) for connection usage and [`examples/python_binding.py`](examples/python_binding.py) for the contract API.
+The Rust scenario contract is available to Python through the `passoflow` package (the import module is `passoflow_python`). Install the published wheel with `python -m pip install passoflow`, or run `maturin develop` from `rust/crates/passoflow-python` while developing. The binding also exposes `DomBrowser` for direct local Chromium CDP operations and `input_platform_info_json()` for read-only native desktop capability diagnostics; see [`rust/crates/passoflow-python/README.md`](rust/crates/passoflow-python/README.md) for connection usage and [`examples/python_binding.py`](examples/python_binding.py) for the contract API.
 
 ![Screenshot](images/screenshot_passoflow_01.png)
 

@@ -7,6 +7,7 @@ use passoflow_engine::{
     NoopSleeper, RuntimeActionResult, RuntimeState, RuntimeStepExecutor,
     run_with_runtime_state_and_tables,
 };
+use passoflow_input::InputBackend;
 use passoflow_web::{BrowserBackend, CdpBrowser, JsonCdpTransport, WaitState, WebSocketCdpWire};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -149,6 +150,29 @@ fn action_schema_json() -> PyResult<String> {
     .map_err(|error| PyRuntimeError::new_err(error.to_string()))
 }
 
+/// Return local native input capabilities and permission diagnostics as JSON.
+#[pyfunction]
+fn input_platform_info_json() -> PyResult<String> {
+    #[cfg(windows)]
+    let (supported, reason, info) = {
+        let adapter = passoflow_input::WindowsInput::new();
+        (true, None, adapter.platform_info())
+    };
+    #[cfg(not(windows))]
+    let (supported, reason, info) = {
+        let adapter = passoflow_input::UnavailableInput::current();
+        (false, Some(adapter.reason.clone()), adapter.platform_info())
+    };
+    to_string(&json!({
+        "contract": CONTRACT_VERSION,
+        "platform": std::env::consts::OS,
+        "supported": supported,
+        "reason": reason,
+        "info": info,
+    }))
+    .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+}
+
 struct PythonRuntimeExecutor {
     callback: Py<PyAny>,
 }
@@ -254,6 +278,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(expand_nested_steps, module)?)?;
     module.add_function(wrap_pyfunction!(contract_version, module)?)?;
     module.add_function(wrap_pyfunction!(action_schema_json, module)?)?;
+    module.add_function(wrap_pyfunction!(input_platform_info_json, module)?)?;
     module.add_function(wrap_pyfunction!(run_runtime_state, module)?)?;
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
@@ -261,7 +286,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{expand_nested_steps, validate_yaml};
+    use super::{expand_nested_steps, input_platform_info_json, validate_yaml};
     use serde_json::Value;
 
     #[test]
@@ -284,5 +309,15 @@ mod tests {
             serde_json::from_str(&expanded).expect("steps are JSON");
         assert_eq!(steps.len(), 1);
         assert_eq!(steps[0]["action"], "wait");
+    }
+
+    #[test]
+    fn exposes_read_only_input_platform_diagnostics() {
+        let result = input_platform_info_json().expect("diagnostics should serialize");
+        let result: Value = serde_json::from_str(&result).expect("diagnostics are JSON");
+        assert_eq!(result["contract"], "0.1");
+        assert_eq!(result["platform"], std::env::consts::OS);
+        assert!(result["supported"].is_boolean());
+        assert!(result["info"].is_object());
     }
 }

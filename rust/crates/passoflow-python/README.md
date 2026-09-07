@@ -29,5 +29,9 @@ For editor or integration discovery, `action_schema_json()` returns the
 versioned action names, required and optional parameters, and reserved
 step-metadata keys.
 
+`input_platform_info_json()` reports whether native desktop input is supported
+on the current platform and includes display, keyboard-layout, and permission
+diagnostics without sending input.
+
 See the [PassoFlow repository](https://github.com/kent-tokyo/passoflow) for
 the full contract and development instructions.
