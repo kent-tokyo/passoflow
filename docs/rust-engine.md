@@ -163,6 +163,8 @@ The same concepts are exposed by `passoflow-core` as
   iterations. The default runner is unchanged.
 - The bridge emits the existing `@@PROGRESS@@` and `@@COMPLETED@@` markers and
   returns step screenshot paths as failure artifacts when a run id is present.
+- Guarded partial reruns using `--start`/`--end` are supported on the opt-in
+  Rust path as well; structural ranges are validated before dispatch.
 - The Python runner logs those returned artifact paths, so the existing Web UI
   stream receives them alongside the Rust event message. Cooperative stop
   propagation is available at step boundaries; the API waits two seconds for

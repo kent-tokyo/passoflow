@@ -486,7 +486,7 @@ def _rust_stop_requested() -> bool:
 
 
 def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
-    """Run a root scenario through Rust, including Rust-owned nested expansion."""
+    """Run the selected scenario steps through Rust, including nested expansion."""
     try:
         import passoflow_python
     except ImportError as error:
@@ -1202,9 +1202,7 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
     variables: dict[str, str] = {}
     try:
         if os.environ.get("PASSOFLOW_USE_RUST_ENGINE") == "1":
-            if start or end:
-                raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not support partial runs; unset it for --start/--end")
-            _run_with_rust_engine(yaml_path, all_steps, run_id)
+            _run_with_rust_engine(yaml_path, steps, run_id)
         else:
             _run_steps(steps, variables, offset=start_idx, total=len(all_steps))
     finally:
