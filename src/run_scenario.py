@@ -423,6 +423,72 @@ def _run_noop(step: dict, variables: dict[str, str]) -> None:
     """
 
 
+def _rust_runtime_callback(step_json: str, state_json: str) -> str:
+    """Adapt one Rust runtime callback invocation to the existing Python actions."""
+    step = json.loads(step_json)
+    state = json.loads(state_json)
+    if not isinstance(step, dict) or not isinstance(state, dict):
+        raise ValueError("Rust runtime callback received malformed JSON")
+    variables = dict(state.get("variables", {}))
+    action = step.get("action")
+    if not isinstance(action, str) or action in {"if", "else", "endif"}:
+        raise ValueError(f"Rust runtime callback received structural action: {action!r}")
+    warning_handler = _StepWarningHandler()
+    logging.getLogger().addHandler(warning_handler)
+    before_screenshot = _capture_step_screenshot() if RUN_ID else None
+    try:
+        ACTIONS[action](step, variables)
+    except Exception as error:
+        step_number = step.get("index", 0)
+        _save_failure_context(before_screenshot, int(step_number), action)
+        return json.dumps(
+            {
+                "result": {"outcome": "failure_stop", "message": str(error), "artifacts": []},
+                "variables": variables,
+            }
+        )
+    finally:
+        logging.getLogger().removeHandler(warning_handler)
+    outcome = "warning_continue" if warning_handler.warned else "success"
+    return json.dumps(
+        {
+            "result": {"outcome": outcome, "message": action, "artifacts": []},
+            "variables": variables,
+        }
+    )
+
+
+def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
+    """Run a compatible root scenario through the opt-in Rust engine binding."""
+    if any(step.get("action") in {"call_scenario", "repeat", "load_table"} for step in steps):
+        raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not yet support nested scenarios or runtime table loading")
+    if any(step.get("loop_table") for step in steps):
+        raise ValueError("PASSOFLOW_USE_RUST_ENGINE requires table rows to be supplied before execution")
+    try:
+        import passoflow_python
+    except ImportError as error:
+        raise RuntimeError(
+            "PASSOFLOW_USE_RUST_ENGINE=1 requires the passoflow Python binding; install the wheel or build it with maturin"
+        ) from error
+    report_json = passoflow_python.run_runtime_state(
+        Path(yaml_path).read_text(encoding="utf-8"),
+        "{}",
+        "{}",
+        _rust_runtime_callback,
+        run_id or "run",
+        1,
+        0,
+    )
+    report = json.loads(report_json)
+    for event in report.get("events", []):
+        logger.info("Rust engine step %s: %s", event.get("step"), event.get("message"))
+    status = report.get("status")
+    if status == "failure_stop":
+        raise RuntimeError("Rust engine stopped after an action failure")
+    if status == "stopped":
+        raise RuntimeError("Rust engine run was stopped")
+
+
 def _run_call_scenario(step: dict, variables: dict[str, str], runtime_state: dict[str, str] | None = None) -> None:
     """Run another scenario file's steps inline, sharing the current variables."""
     steps = _load_steps(SCENARIOS_DIR / step["path"])
@@ -1063,7 +1129,12 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
                     ) from e
     variables: dict[str, str] = {}
     try:
-        _run_steps(steps, variables, offset=start_idx, total=len(all_steps))
+        if os.environ.get("PASSOFLOW_USE_RUST_ENGINE") == "1":
+            if start or end:
+                raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not support partial runs; unset it for --start/--end")
+            _run_with_rust_engine(yaml_path, all_steps, run_id)
+        else:
+            _run_steps(steps, variables, offset=start_idx, total=len(all_steps))
     finally:
         overlay.clear()
         close_browser()

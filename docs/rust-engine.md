@@ -106,6 +106,10 @@ The same concepts are exposed by `passoflow-core` as
 - Runtime execution honors each step's `retry` and `retry_interval_ms` when
   present; the function arguments provide the fallback policy for steps without
   those fields.
+- The existing Python runner can opt into this bridge with
+  `PASSOFLOW_USE_RUST_ENGINE=1`. The current migration slice supports root
+  actions and fixed loops; nested scenarios and runtime table loading are
+  rejected explicitly. The default runner is unchanged.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
