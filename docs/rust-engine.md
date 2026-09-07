@@ -92,6 +92,8 @@ The same concepts are exposed by `passoflow-core` as
   any input event reaches the OS.
 - Screen-only adapters reject active-window-relative coordinates unless they
   explicitly provide a resolver.
+- Unsupported-platform adapters report the unsupported platform consistently,
+  regardless of the requested coordinate space.
 - Image actions use exact-size sRGB matching with no implicit scaling or color
   conversion; alpha is ignored. Search supports candidate priority, confidence, retry, regions, anchors/offsets,
   active-window regions, target-window guards, and ambiguity-safe clicks.

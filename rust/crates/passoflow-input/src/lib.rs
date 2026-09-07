@@ -271,6 +271,13 @@ impl InputBackend for UnavailableInput {
         })
     }
 
+    fn resolve_point(&self, _point: Point, _space: CoordinateSpace) -> Result<Point, InputError> {
+        Err(InputError::UnsupportedPlatform {
+            platform: self.platform.clone(),
+            reason: self.reason.clone(),
+        })
+    }
+
     fn platform_info(&self) -> PlatformInfo {
         self.info.clone()
     }
@@ -1008,6 +1015,10 @@ mod tests {
         );
         assert!(matches!(
             controller.move_to(Point { x: 10, y: 10 }, CoordinateSpace::Screen),
+            Err(InputError::UnsupportedPlatform { .. })
+        ));
+        assert!(matches!(
+            controller.move_to(Point { x: 10, y: 10 }, CoordinateSpace::ActiveWindow),
             Err(InputError::UnsupportedPlatform { .. })
         ));
     }

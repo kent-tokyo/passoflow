@@ -101,6 +101,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 座標範囲、フェイルセーフ座標、クリック表示時間、メモリ上の記録backendを追加する。
 - [x] アクティブウィンドウ座標を画面座標へ解決した後に、画面範囲とfail-safeを検査する。
 - [x] 画面座標専用のinput adapterがアクティブウィンドウ座標を受けた場合はfail-closedにする。
+- [x] 未対応OSでは座標系に関係なくunsupported-platformエラーを明示する。
 - [x] 表示倍率、マルチモニタのディスプレイ情報、キーボード配列情報、アクセシビリティ権限状態を型定義する。
 - [x] 画面座標のポインタ、クリック、スクロール、キー、ホットキー、Unicode文字入力を行うWindows `user32` adapterの初期実装を追加する。
 - [x] Unicode文字を8bitのkeybdイベント経路ではなく、Win32 `SendInput`のUTF-16イベントで入力する。
