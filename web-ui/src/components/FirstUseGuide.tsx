@@ -57,6 +57,11 @@ export default function FirstUseGuide() {
       {desktopStatus && <span className={`first-use-guide-setup-status ${desktopStatus.capture === "ready" ? "ready" : "warning"}`}>
         {desktopStatus.capture === "ready" ? t("firstUseGuideDesktopReady") : t("firstUseGuideDesktopNeedsAttention")}
       </span>}
+      {desktopStatus?.native && <details className="first-use-guide-native">
+        <summary>{t("firstUseGuideNativeDiagnostics")}</summary>
+        <span>{desktopStatus.native.platform} · {desktopStatus.native.supported ? t("firstUseGuideNativeSupported") : t("firstUseGuideNativeUnsupported")}</span>
+        {desktopStatus.native.reason && <code>{desktopStatus.native.reason}</code>}
+      </details>}
       <button type="button" className="first-use-guide-close" onClick={dismiss}>
         {t("firstUseGuideDismiss")}
       </button>

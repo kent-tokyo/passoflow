@@ -126,6 +126,8 @@ async function checkDomSetupGuidance() {
   assert.match(server, /@app\.get\("\/api\/environment"\)/)
   assert.match(webActions, /dom_browser_setup_status/)
   assert.match(guide, /firstUseGuideChromiumMissing/)
+  assert.match(guide, /firstUseGuideNativeDiagnostics/)
+  assert.match(api, /native\?:/)
   assert.match(api, /fetchEnvironmentStatus/)
   assert.match(panel, /domSetupChromiumMissing/)
   assert.match(panel, /copySetupCommand/)
