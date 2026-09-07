@@ -82,6 +82,8 @@ The same concepts are exposed by `passoflow-core` as
   flow are evaluated by the stateful Rust engine.
 - The callback bridge rejects unknown actions explicitly before dispatch, even
   if a caller bypasses the normal validator.
+- Callback results are parsed as the complete typed `RuntimeActionResult`;
+  malformed JSON or missing outcome fields fail closed as an adapter error.
 - Callback warnings use the same action outcome contract as the Python runner:
   recoverable image/search warnings produce `warning_continue`, while
   non-recoverable warnings from DOM and other stop-on-warning actions produce

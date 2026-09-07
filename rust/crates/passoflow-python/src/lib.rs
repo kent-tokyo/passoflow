@@ -187,6 +187,16 @@ struct PythonRuntimeExecutor {
     callback: Py<PyAny>,
 }
 
+fn parse_runtime_action_result(
+    result_json: &str,
+) -> Result<RuntimeActionResult, passoflow_engine::EngineError> {
+    from_str(result_json).map_err(|error| {
+        passoflow_engine::EngineError::Adapter(format!(
+            "runtime callback returned invalid JSON: {error}"
+        ))
+    })
+}
+
 impl RuntimeStepExecutor for PythonRuntimeExecutor {
     fn execute_runtime(
         &mut self,
@@ -210,11 +220,7 @@ impl RuntimeStepExecutor for PythonRuntimeExecutor {
             let result_json = result
                 .extract::<String>()
                 .map_err(|error| passoflow_engine::EngineError::Adapter(error.to_string()))?;
-            from_str(&result_json).map_err(|error| {
-                passoflow_engine::EngineError::Adapter(format!(
-                    "runtime callback returned invalid JSON: {error}"
-                ))
-            })
+            parse_runtime_action_result(&result_json)
         })
     }
 }
@@ -320,6 +326,24 @@ mod tests {
             action_outcome_contract_json("send_webhook", Some("continue")).expect("JSON result");
         let result: Value = serde_json::from_str(&result).expect("valid JSON");
         assert_eq!(result["warning_continue"], true);
+    }
+
+    #[test]
+    fn rejects_malformed_runtime_callback_results() {
+        let error = super::parse_runtime_action_result("{\"result\":{}}")
+            .expect_err("missing outcome should be rejected");
+        assert!(
+            error
+                .to_string()
+                .contains("runtime callback returned invalid JSON")
+        );
+        let error = super::parse_runtime_action_result("not-json")
+            .expect_err("malformed JSON should be rejected");
+        assert!(
+            error
+                .to_string()
+                .contains("runtime callback returned invalid JSON")
+        );
     }
 
     #[test]
