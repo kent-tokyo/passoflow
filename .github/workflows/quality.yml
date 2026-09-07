@@ -57,7 +57,7 @@ jobs:
           python-version: '3.11'
       - run: python -m pip install PyYAML==6.0.3
       - run: python -m compileall -q src tests
-      - run: python -m unittest tests/test_rust_validator_bridge.py tests/test_validator_compatibility.py tests/test_rust_runner_opt_in.py tests/test_run_scenario_outcomes.py
+      - run: python -m unittest tests/test_action_contract.py tests/test_rust_validator_bridge.py tests/test_validator_compatibility.py tests/test_rust_runner_opt_in.py tests/test_run_scenario_outcomes.py
 
   web-ui:
     name: Web UI checks

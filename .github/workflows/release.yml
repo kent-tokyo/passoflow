@@ -101,6 +101,9 @@ jobs:
           assert passoflow_python.contract_version() == "0.1"
           assert hasattr(passoflow_python, "DomBrowser")
           assert hasattr(passoflow_python, "input_platform_info_json")
+          assert hasattr(passoflow_python, "action_outcome_contract_json")
+          outcome = json.loads(passoflow_python.action_outcome_contract_json("browser_click"))
+          assert outcome["warning_continue"] is False
           schema = json.loads(passoflow_python.action_schema_json())
           assert schema["contract"] == "0.1"
           assert any(action["name"] == "browser_fill" for action in schema["actions"])
@@ -155,6 +158,9 @@ jobs:
           assert passoflow_python.contract_version() == "0.1"
           assert hasattr(passoflow_python, "DomBrowser")
           assert hasattr(passoflow_python, "input_platform_info_json")
+          assert hasattr(passoflow_python, "action_outcome_contract_json")
+          outcome = json.loads(passoflow_python.action_outcome_contract_json("browser_click"))
+          assert outcome["warning_continue"] is False
           schema = json.loads(passoflow_python.action_schema_json())
           assert schema["contract"] == "0.1"
           assert any(action["name"] == "browser_fill" for action in schema["actions"])
