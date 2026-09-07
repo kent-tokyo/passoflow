@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added a one-call `CdpBrowser::connect` constructor for the local WebSocket backend.
 - Exposed the local Rust DOM backend as `passoflow_python.DomBrowser`.
 - Added opt-in Python `web_actions` delegation to `DomBrowser` through a local CDP endpoint.
+- Exported `DomBrowser` from the Python package namespace and added its type stub.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

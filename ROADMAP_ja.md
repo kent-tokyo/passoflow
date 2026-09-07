@@ -161,6 +161,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 再利用可能な`passoflow-core`をcrates.ioへ公開する。engineはインターフェースが安定してから公開する。
 - [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
+- [x] 0.1.2 wheelをローカルビルドし、クリーンな仮想環境で公開APIを検証する。
 - [x] `release.yml` / `pypi` environmentを使う`passoflow`向けGitHub Actions Trusted Publisher登録を完了する。
 - [x] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。
 
