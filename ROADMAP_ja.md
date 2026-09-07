@@ -164,6 +164,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 0.1.2 wheelをローカルビルドし、クリーンな仮想環境で公開APIを検証する。
 - [x] クリーンwheelから実Chromium CDPへ接続し、遷移、待機、セレクタプレビュー、クリックのsmoke testを実行する。
 - [x] 再利用可能なローカルHTML fixtureでRust DOMの入力、クリック、待機、セレクタプレビューを検証する。
+- [x] release workflowのwheel smoke testで公開された`DomBrowser` APIを必須検証する。
 - [x] `release.yml` / `pypi` environmentを使う`passoflow`向けGitHub Actions Trusted Publisher登録を完了する。
 - [x] デスクトップ権限、Chromium、対応OS、未対応アダプタを明記する。
 

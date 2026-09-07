@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exported `DomBrowser` from the Python package namespace and added its type stub.
 - Verified the clean 0.1.2 wheel against a live local Chromium CDP page.
 - Added a reusable DOM fixture and verified Rust fill/click/wait/preview end to end.
+- Strengthened the release wheel smoke test to require the exported `DomBrowser` API.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.
