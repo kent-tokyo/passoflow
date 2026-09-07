@@ -111,6 +111,14 @@ class RustValidatorBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "step 1"):
             assert_plan_matches_steps(plan, [{"action": "click_image"}])
 
+    def test_plan_alignment_rejects_stale_parameters(self):
+        plan = {
+            "contract": "0.1",
+            "steps": [{"index": 1, "action": "browser_click", "params": {"selector": "#old"}}],
+        }
+        with self.assertRaisesRegex(RuntimeError, "parameters"):
+            assert_plan_matches_steps(plan, [{"action": "browser_click", "selector": "#new"}])
+
     def test_materializes_python_steps_from_normalized_rust_parameters(self):
         plan = {
             "contract": "0.1",

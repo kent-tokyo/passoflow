@@ -160,6 +160,11 @@ def assert_plan_matches_steps(plan: dict[str, Any], steps: list[dict[str, Any]])
     for index, (planned, step) in enumerate(zip(planned_steps, steps, strict=True), start=1):
         if planned["index"] != index or planned["action"] != step.get("action"):
             raise RuntimeError(f"Rust execution plan does not match loaded step {index}")
+        planned_params = planned.get("params")
+        if planned_params is not None:
+            loaded_params = {key: value for key, value in step.items() if key != "action"}
+            if planned_params != loaded_params:
+                raise RuntimeError(f"Rust execution plan parameters do not match loaded step {index}")
 
 
 def steps_from_rust_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:

@@ -91,6 +91,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Verify that the published umbrella crate re-exports the warning contract.
 - [x] Verify that warning status and ordered step-attempt events remain stable after later success.
 - [x] Reject malformed or incomplete Python callback results before Rust engine execution continues.
+- [x] Reject stale Rust plans when loaded step parameters changed between planning and dispatch.
 - [x] Propagate cooperative stop markers into the Rust-backed runner at step boundaries.
 - [x] Replace the API's immediate subprocess kill with a graceful stop lifecycle and delayed fallback kill.
 - [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.

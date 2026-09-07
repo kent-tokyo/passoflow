@@ -80,6 +80,8 @@ The same concepts are exposed by `passoflow-core` as
   parameters from the Rust plan after strict step alignment. Python action
   functions remain the runtime adapter; variable mutation and dynamic control
   flow are evaluated by the stateful Rust engine.
+- Strict alignment includes action parameters, so a plan with stale values is
+  rejected before dispatch.
 - The callback bridge rejects unknown actions explicitly before dispatch, even
   if a caller bypasses the normal validator.
 - Callback results are parsed as the complete typed `RuntimeActionResult`;
