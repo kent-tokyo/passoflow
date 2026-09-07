@@ -41,8 +41,8 @@ do not need to edit YAML to create a scenario.
 2. Run `npm ci` inside `web-ui` when using a source checkout.
 3. Double-click `run_webapp.bat` on Windows. It starts the services and opens the browser when ready.
 4. Open an existing scenario or create a new one in the editor.
-4. Click an action in the left panel, or drag it onto the canvas.
-5. Fill the required values in the right panel, choose Save, and press Run.
+5. Click an action in the left panel, or drag it onto the canvas.
+6. Fill the required values in the right panel, choose Save, and press Run.
 
 Start with the [general user guide](http://127.0.0.1:8000/docs/manual?lang=en)
 if this is your first time. Use the [advanced YAML/action

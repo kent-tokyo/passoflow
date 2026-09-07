@@ -109,7 +109,7 @@ Gate: existing scenarios validate and run without observable schema regression.
 - [x] Add a Windows CI job that compiles and checks the native adapter on `windows-latest`.
 - [x] Enforce adapter-reported denied accessibility permission before dispatching any input event.
 - [ ] Implement platform adapters directly against supported OS APIs; do not wrap PyAutoGUI, Enigo, or another automation library.
-- [ ] Define coordinate spaces, display scaling, multi-monitor behavior, keyboard layouts, and permission diagnostics.
+- [x] Define coordinate spaces, display scaling, multi-monitor behavior, keyboard layouts, and permission diagnostics; unresolved spaces and denied permissions fail closed.
 - [x] Add a small standalone dry-run input test tool and portable safety tests.
 - [x] Keep the red click indicator and fail-safe behavior as PassoFlow-owned features; reuse the persistent overlay window so the visible marker does not pay Tk startup/teardown cost per click.
 
