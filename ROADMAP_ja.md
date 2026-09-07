@@ -88,6 +88,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] actionごとのwarning outcome contractをRust coreから公開し、Python callback bridgeから利用する。
 - [x] Pythonのwarning contractをデスクトップ依存から分離し、クリーン環境でも回帰テストできるようにする。
 - [x] Rustのwarning contractをPython package namespace、型stub、example、binding guideから公開する。
+- [x] 公開umbrella crateからwarning contractが再exportされることを検証する。
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。

@@ -16,7 +16,7 @@ pub const fn contract_version() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{Scenario, contract_version};
+    use super::{Scenario, action_outcome_contract, contract_version};
 
     #[test]
     fn exposes_the_stable_contract_through_the_umbrella_crate() {
@@ -28,5 +28,11 @@ mod tests {
                 .all(|diagnostic| { diagnostic.severity == passoflow_core::Severity::Warning })
         );
         assert_eq!(contract_version(), "0.1");
+    }
+
+    #[test]
+    fn reexports_the_action_warning_contract() {
+        assert!(action_outcome_contract("click_image", None).warning_continue);
+        assert!(!action_outcome_contract("browser_click", None).warning_continue);
     }
 }
