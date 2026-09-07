@@ -136,6 +136,10 @@ The same concepts are exposed by `passoflow-core` as
   stream receives them alongside the Rust event message. Cooperative stop
   propagation is available at step boundaries; the API waits two seconds for
   graceful completion before using kill as a fallback.
+- `web_actions` can opt into direct Rust DOM dispatch with
+  `PASSOFLOW_USE_RUST_DOM=1` and `PASSOFLOW_RUST_CDP_ENDPOINT=ws://...`. The
+  default Playwright path remains unchanged, and switching modes does not alter
+  the scenario action names.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
