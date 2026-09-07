@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use passoflow_core::{CONTRACT_VERSION, RetryPolicy, Scenario};
+use passoflow_core::{CONTRACT_VERSION, RetryPolicy, Scenario, action_schema, step_meta_keys};
 use passoflow_engine::{
     NoopSleeper, RuntimeActionResult, RuntimeState, RuntimeStepExecutor,
     run_with_runtime_state_and_tables,
@@ -118,6 +118,17 @@ fn contract_version() -> &'static str {
     CONTRACT_VERSION
 }
 
+/// Return the stable action and step-metadata schema as JSON.
+#[pyfunction]
+fn action_schema_json() -> PyResult<String> {
+    to_string(&json!({
+        "contract": CONTRACT_VERSION,
+        "actions": action_schema(),
+        "step_meta_keys": step_meta_keys(),
+    }))
+    .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+}
+
 struct PythonRuntimeExecutor {
     callback: Py<PyAny>,
 }
@@ -221,6 +232,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(validate_yaml, module)?)?;
     module.add_function(wrap_pyfunction!(normalize_yaml, module)?)?;
     module.add_function(wrap_pyfunction!(contract_version, module)?)?;
+    module.add_function(wrap_pyfunction!(action_schema_json, module)?)?;
     module.add_function(wrap_pyfunction!(run_runtime_state, module)?)?;
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

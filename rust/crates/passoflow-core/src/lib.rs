@@ -95,6 +95,14 @@ pub enum Severity {
     Warning,
 }
 
+/// One action's required and optional parameter names in the stable YAML contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActionDefinition {
+    pub name: String,
+    pub required: Vec<String>,
+    pub optional: Vec<String>,
+}
+
 /// A stable, machine-readable validation result.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diagnostic {
@@ -871,6 +879,77 @@ fn schema(action: &str) -> Option<(&'static [&'static str], &'static [&'static s
     })
 }
 
+/// Return the complete action schema in deterministic declaration order.
+#[must_use]
+pub fn action_schema() -> Vec<ActionDefinition> {
+    ACTION_NAMES
+        .iter()
+        .filter_map(|name| {
+            let (required, optional) = schema(name)?;
+            Some(ActionDefinition {
+                name: (*name).to_owned(),
+                required: required.iter().map(|item| (*item).to_owned()).collect(),
+                optional: optional.iter().map(|item| (*item).to_owned()).collect(),
+            })
+        })
+        .collect()
+}
+
+/// Step-level metadata keys accepted independently of an action's parameters.
+#[must_use]
+pub const fn step_meta_keys() -> &'static [&'static str] {
+    META_KEYS
+}
+
+const ACTION_NAMES: &[&str] = &[
+    "start",
+    "end",
+    "if",
+    "else",
+    "endif",
+    "call_scenario",
+    "repeat",
+    "send_webhook",
+    "set_variable",
+    "concat_variable",
+    "set_year_month_variable",
+    "set_year_month_day_variable",
+    "set_month_start_variable",
+    "set_month_end_variable",
+    "type_text",
+    "set_clipboard",
+    "paste",
+    "paste_variable",
+    "clear_input",
+    "press_key",
+    "hotkey",
+    "launch_app",
+    "rename_file",
+    "move_file",
+    "copy_file",
+    "map_network_drive",
+    "open_excel_file",
+    "open_new_excel",
+    "get_excel_value",
+    "set_excel_value",
+    "save_excel_file",
+    "create_excel_sheet",
+    "delete_excel_sheet",
+    "delete_excel_row",
+    "sort_excel_range",
+    "run_excel_macro",
+    "load_table",
+    "activate_window",
+    "open_url",
+    "browser_navigate",
+    "browser_click",
+    "browser_fill",
+    "browser_wait_for",
+    "move_mouse_to_image",
+    "click_image",
+    "wait",
+];
+
 const IMAGE_OPTIONS: &[&str] = &[
     "retry",
     "retry_interval_ms",
@@ -1293,6 +1372,38 @@ mod tests {
     fn validates_existing_style_scenario() {
         let scenario = Scenario::from_yaml("title: Login\nsteps:\n  - action: browser_click\n    selector: '#login'\n  - action: click_image\n    images: [button.png]\n    confidence: 0.9\n").expect("YAML should parse");
         assert!(scenario.is_valid());
+    }
+
+    #[test]
+    fn exposes_the_complete_deterministic_action_schema() {
+        let definitions = super::action_schema();
+        assert_eq!(
+            definitions.first().map(|item| item.name.as_str()),
+            Some("start")
+        );
+        assert_eq!(
+            definitions.last().map(|item| item.name.as_str()),
+            Some("wait")
+        );
+        assert_eq!(definitions.len(), 46);
+        let browser_fill = definitions
+            .iter()
+            .find(|item| item.name == "browser_fill")
+            .expect("browser_fill should be part of the contract");
+        assert_eq!(browser_fill.required, ["selector", "text"]);
+        assert_eq!(browser_fill.optional, ["timeout_ms"]);
+        assert_eq!(
+            super::step_meta_keys(),
+            [
+                "action",
+                "note",
+                "group",
+                "title",
+                "loop",
+                "loop_count",
+                "loop_table"
+            ]
+        );
     }
 
     #[test]

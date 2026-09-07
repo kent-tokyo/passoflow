@@ -26,6 +26,11 @@ validation errors. Validation diagnostics use stable Rust codes and step paths
 such as `steps[3]`; diagnostic ordering is deterministic by path, code, and
 message.
 
+The Rust contract exposes the complete action schema through
+`passoflow_core::action_schema()` and the Python binding's
+`action_schema_json()`. These APIs are intended for validator/UI compatibility
+checks; they do not execute actions or grant access to the operating system.
+
 ## Normalization
 
 Parsing preserves YAML values. Serialization emits a deterministic YAML form:

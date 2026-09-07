@@ -25,5 +25,9 @@ print(json.loads(browser.preview_selector("#submit"))["count"])
 The DOM backend is synchronous and local-only. Screen input and capture remain
 separate PassoFlow-owned adapter surfaces.
 
+For editor or integration discovery, `action_schema_json()` returns the
+versioned action names, required and optional parameters, and reserved
+step-metadata keys.
+
 See the [PassoFlow repository](https://github.com/kent-tokyo/passoflow) for
 the full contract and development instructions.
