@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 description = "PassoFlow-owned DOM browser operation contracts"
 repository.workspace = true
+license.workspace = true
 publish = false
 
 [features]

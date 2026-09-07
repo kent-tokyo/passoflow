@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 description = "PassoFlow-owned input contracts and safety boundary"
 repository.workspace = true
+license.workspace = true
 publish = false
 
 [lints]

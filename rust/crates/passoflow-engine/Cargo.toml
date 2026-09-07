@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 description = "PassoFlow's deterministic local execution boundary"
 repository.workspace = true
+license.workspace = true
 publish = false
 
 [lints]
