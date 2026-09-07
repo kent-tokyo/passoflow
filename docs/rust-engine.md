@@ -88,6 +88,8 @@ The same concepts are exposed by `passoflow-core` as
   point.
 - A native adapter reporting denied accessibility permission is rejected before
   any input event reaches the OS.
+- Screen-only adapters reject active-window-relative coordinates unless they
+  explicitly provide a resolver.
 - Image actions use exact-size sRGB matching with no implicit scaling or color
   conversion; alpha is ignored. Search supports candidate priority, confidence, retry, regions, anchors/offsets,
   active-window regions, target-window guards, and ambiguity-safe clicks.

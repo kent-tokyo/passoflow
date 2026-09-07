@@ -189,6 +189,8 @@ pub enum InputError {
     OutsideScreen { x: i32, y: i32 },
     #[error("fail-safe point ({x}, {y}) was selected")]
     FailSafeTriggered { x: i32, y: i32 },
+    #[error("coordinate space {space:?} is unavailable from this input adapter")]
+    CoordinateSpaceUnavailable { space: CoordinateSpace },
     #[error("key name must not be empty")]
     EmptyKey,
     #[error("hotkey must contain at least one key")]
@@ -219,12 +221,16 @@ pub trait InputBackend {
     /// Resolve an event point into screen coordinates before safety checks.
     ///
     /// Adapters with active-window support should override this method. The
-    /// identity default keeps recording and other screen-only adapters useful.
+    /// screen-space default keeps recording and other screen-only adapters useful,
+    /// while unsupported relative coordinates fail closed.
     /// # Errors
     ///
     /// Returns an adapter error when the active window cannot be resolved.
-    fn resolve_point(&self, point: Point, _space: CoordinateSpace) -> Result<Point, InputError> {
-        Ok(point)
+    fn resolve_point(&self, point: Point, space: CoordinateSpace) -> Result<Point, InputError> {
+        match space {
+            CoordinateSpace::Screen => Ok(point),
+            CoordinateSpace::ActiveWindow => Err(InputError::CoordinateSpaceUnavailable { space }),
+        }
     }
 
     /// Report displays, keyboard layout, and permission state before execution.
@@ -948,6 +954,17 @@ mod tests {
             Err(InputError::FailSafeTriggered { x: 0, y: 0 })
         );
         assert_eq!(controller.press_key(" "), Err(InputError::EmptyKey));
+    }
+
+    #[test]
+    fn rejects_active_window_coordinates_on_screen_only_adapters() {
+        let mut controller = controller();
+        assert_eq!(
+            controller.move_to(Point { x: 10, y: 10 }, CoordinateSpace::ActiveWindow),
+            Err(InputError::CoordinateSpaceUnavailable {
+                space: CoordinateSpace::ActiveWindow
+            })
+        );
     }
 
     #[test]
