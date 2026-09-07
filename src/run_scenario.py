@@ -121,6 +121,14 @@ class _StepWarningHandler(logging.Handler):
         if record.levelno >= logging.WARNING:
             self.warned = True
 
+
+def _rust_warning_outcome(action: str, step: dict, warned: bool) -> str:
+    """Map callback warnings to the same action outcome contract as Python runs."""
+    if not warned:
+        return "success"
+    contract = action_outcome_contract(action, step)
+    return "warning_continue" if contract["warning_continue"] else "failure_stop"
+
 # Tables loaded by load_table steps, keyed by their `name`, for loop_table blocks to iterate
 # over. Module-level rather than threaded through every function alongside `variables`, since
 # each run is a fresh, single-threaded subprocess (see api_server.py's stream_run) — nothing
@@ -464,7 +472,21 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
         )
     finally:
         logging.getLogger().removeHandler(warning_handler)
-    outcome = "warning_continue" if warning_handler.warned else "success"
+    outcome = _rust_warning_outcome(action, step, warning_handler.warned)
+    if outcome == "failure_stop":
+        artifact_paths = _save_failure_context(before_screenshot, step_number, action)
+        return json.dumps(
+            {
+                "result": {
+                    "outcome": outcome,
+                    "message": f"{action} emitted a non-recoverable warning",
+                    "artifacts": [
+                        {"kind": "step_screenshot", "path": path} for path in artifact_paths
+                    ],
+                },
+                "variables": variables,
+            }
+        )
     if RUST_ENGINE_TOTAL:
         print(f"@@COMPLETED@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
     return json.dumps(

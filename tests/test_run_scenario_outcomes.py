@@ -51,6 +51,19 @@ class LastStepConditionTests(unittest.TestCase):
         )
         self.assertTrue(run_scenario.action_outcome_contract("browser_click")["failure_stop"])
 
+    def test_rust_warning_outcome_follows_action_contract(self):
+        self.assertEqual(run_scenario._rust_warning_outcome("click_image", {}, True), "warning_continue")
+        self.assertEqual(run_scenario._rust_warning_outcome("browser_click", {}, True), "failure_stop")
+        self.assertEqual(
+            run_scenario._rust_warning_outcome("send_webhook", {"on_error": "continue"}, True),
+            "warning_continue",
+        )
+        self.assertEqual(
+            run_scenario._rust_warning_outcome("send_webhook", {"on_error": "stop"}, True),
+            "failure_stop",
+        )
+        self.assertEqual(run_scenario._rust_warning_outcome("browser_click", {}, False), "success")
+
     def test_last_step_condition_matches_warning_status(self):
         state = {"last_step": "warned"}
 

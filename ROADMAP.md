@@ -84,6 +84,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Add an opt-in Python runner path that dispatches compatible root actions through the Rust engine callback bridge.
 - [x] Preserve live progress markers and step before/after screenshot artifacts in the Rust-backed runner path.
 - [x] Complete the failure-artifact handoff from Rust events to the existing Python/Web UI log stream.
+- [x] Apply the action-specific warning outcome contract in the Rust callback bridge, stopping on non-recoverable warnings.
 - [x] Propagate cooperative stop markers into the Rust-backed runner at step boundaries.
 - [x] Replace the API's immediate subprocess kill with a graceful stop lifecycle and delayed fallback kill.
 - [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.

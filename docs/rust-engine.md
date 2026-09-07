@@ -82,6 +82,10 @@ The same concepts are exposed by `passoflow-core` as
   flow are evaluated by the stateful Rust engine.
 - The callback bridge rejects unknown actions explicitly before dispatch, even
   if a caller bypasses the normal validator.
+- Callback warnings use the same action outcome contract as the Python runner:
+  recoverable image/search warnings produce `warning_continue`, while
+  non-recoverable warnings from DOM and other stop-on-warning actions produce
+  `failure_stop` with local failure artifacts.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.
