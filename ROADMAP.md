@@ -97,6 +97,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Preserve global progress and event step numbers during Rust partial reruns.
 - [x] Validate guarded rerun bounds consistently and reject invalid ranges before dispatch.
 - [x] Validate Rust runtime report status and event shape before handing events to the Web UI.
+- [x] Preflight expanded Rust actions before any table loading or action dispatch.
 - [x] Keep run-level `stopped` status distinct from per-action event outcomes.
 - [x] Reject boolean values masquerading as event step numbers at the runtime report boundary.
 - [x] Require the published wheel smoke tests to verify the exported warning contract API.

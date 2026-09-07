@@ -15,6 +15,7 @@ import yaml
 
 from app_paths import app_root
 from run_range import resolve_run_range
+from rust_action_coverage import unsupported_actions
 from runtime_report import validate_runtime_report
 from action_contract import action_outcome_contract
 from input_actions import (
@@ -510,6 +511,12 @@ def _run_with_rust_engine(
             json.dumps(sources, ensure_ascii=False),
         )
     )
+    unsupported = unsupported_actions(expanded_steps, set(ACTIONS))
+    if unsupported:
+        raise RuntimeError(
+            "Rust engine action preflight failed; unsupported actions: "
+            + ", ".join(unsupported)
+        )
     global RUST_ENGINE_STEP_OFFSET, RUST_ENGINE_TOTAL
     RUST_ENGINE_STEP_OFFSET = step_offset
     RUST_ENGINE_TOTAL = display_total or len(expanded_steps)

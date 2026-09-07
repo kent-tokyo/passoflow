@@ -86,6 +86,9 @@ The same concepts are exposed by `passoflow-core` as
   explicit alignment error rather than leaking a parsing exception.
 - The callback bridge rejects unknown actions explicitly before dispatch, even
   if a caller bypasses the normal validator.
+- The Rust-backed runner also preflights the complete expanded step list before
+  loading tables or dispatching any action, so unsupported actions cannot cause
+  a partially executed run.
 - Callback results are parsed as the complete typed `RuntimeActionResult`;
   malformed JSON or missing outcome fields fail closed as an adapter error.
 - Callback warnings use the same action outcome contract as the Python runner:
