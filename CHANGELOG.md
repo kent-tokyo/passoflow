@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Exposed the stateful Rust runner through a Python callback binding for staged runner migration.
 - Preserved step-level retry and retry-interval settings in the Rust runtime path.
 - Added an opt-in Python runner path that dispatches compatible root actions through the Rust engine callback bridge.
+- Added typed DOM action conversion from normalized Rust execution-plan steps.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

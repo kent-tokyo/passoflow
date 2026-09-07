@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 
+use passoflow_core::PlannedStep;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -81,12 +82,18 @@ impl BrowserAction {
 /// Errors that must be reported before a browser backend is called.
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum BrowserError {
+    #[error("unsupported DOM action: {0}")]
+    UnsupportedAction(String),
+    #[error("missing DOM action parameter: {0}")]
+    MissingParameter(String),
     #[error("DOM selector must not be empty")]
     EmptySelector,
     #[error("browser URL must use http or https: {url}")]
     InvalidUrl { url: String },
     #[error("browser wait timeout must be greater than zero")]
     InvalidTimeout,
+    #[error("unsupported browser wait state: {0}")]
+    InvalidWaitState(String),
     #[error("browser backend is unavailable: {0}")]
     BackendUnavailable(String),
 }
@@ -184,6 +191,65 @@ impl BrowserBackend for RecordingBrowser {
     }
 }
 
+impl BrowserAction {
+    /// Convert a normalized Rust plan step into a validated DOM operation.
+    ///
+    /// This is deliberately separate from [`BrowserBackend`] so a future CDP
+    /// adapter receives only supported, typed operations.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for unsupported actions, missing parameters, or an
+    /// invalid wait state/timeout.
+    pub fn from_planned_step(step: &PlannedStep) -> Result<Self, BrowserError> {
+        let text = |name: &str| {
+            step.params
+                .get(name)
+                .and_then(serde_yaml::Value::as_str)
+                .map(str::to_owned)
+                .ok_or_else(|| BrowserError::MissingParameter(name.to_owned()))
+        };
+        let timeout = || {
+            step.params
+                .get("timeout_ms")
+                .and_then(serde_yaml::Value::as_u64)
+                .ok_or(BrowserError::InvalidTimeout)
+        };
+        let action = match step.action.as_str() {
+            "browser_navigate" => Self::Navigate { url: text("url")? },
+            "browser_click" => Self::Click {
+                selector: text("selector")?,
+            },
+            "browser_fill" => Self::Fill {
+                selector: text("selector")?,
+                text: text("text")?,
+            },
+            "browser_wait_for" => {
+                let state = match step
+                    .params
+                    .get("state")
+                    .and_then(serde_yaml::Value::as_str)
+                    .unwrap_or("visible")
+                {
+                    "attached" => WaitState::Attached,
+                    "detached" => WaitState::Detached,
+                    "hidden" => WaitState::Hidden,
+                    "visible" => WaitState::Visible,
+                    other => return Err(BrowserError::InvalidWaitState(other.to_owned())),
+                };
+                Self::WaitFor {
+                    selector: text("selector")?,
+                    state,
+                    timeout_ms: timeout()?,
+                }
+            }
+            other => return Err(BrowserError::UnsupportedAction(other.to_owned())),
+        };
+        action.validate()?;
+        Ok(action)
+    }
+}
+
 /// Dispatch one validated action to a backend.
 ///
 /// # Errors
@@ -272,5 +338,54 @@ mod tests {
             Err(BrowserError::EmptySelector)
         );
         assert!(browser.events().is_empty());
+    }
+
+    #[test]
+    fn maps_normalized_plan_steps_to_typed_dom_actions() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: browser_navigate\n    url: https://example.test\n  - action: browser_click\n    selector: '#submit'\n  - action: browser_fill\n    selector: '#name'\n    text: Ada\n  - action: browser_wait_for\n    selector: '#result'\n    state: attached\n    timeout_ms: 2000\n",
+        )
+        .expect("scenario should parse");
+        let plan = scenario.execution_plan();
+
+        assert_eq!(
+            BrowserAction::from_planned_step(&plan.steps[0]),
+            Ok(BrowserAction::Navigate {
+                url: "https://example.test".to_owned()
+            })
+        );
+        assert_eq!(
+            BrowserAction::from_planned_step(&plan.steps[1]),
+            Ok(BrowserAction::Click {
+                selector: "#submit".to_owned()
+            })
+        );
+        assert_eq!(
+            BrowserAction::from_planned_step(&plan.steps[2]),
+            Ok(BrowserAction::Fill {
+                selector: "#name".to_owned(),
+                text: "Ada".to_owned()
+            })
+        );
+        assert_eq!(
+            BrowserAction::from_planned_step(&plan.steps[3]),
+            Ok(BrowserAction::WaitFor {
+                selector: "#result".to_owned(),
+                state: WaitState::Attached,
+                timeout_ms: 2_000
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_unsupported_plan_dom_steps_before_backend_dispatch() {
+        let scenario = passoflow_core::Scenario::from_yaml(
+            "steps:\n  - action: browser_wait_for\n    selector: '#result'\n    state: eventually\n    timeout_ms: 1000\n",
+        )
+        .expect("scenario should parse");
+        assert_eq!(
+            BrowserAction::from_planned_step(&scenario.execution_plan().steps[0]),
+            Err(BrowserError::InvalidWaitState("eventually".to_owned()))
+        );
     }
 }

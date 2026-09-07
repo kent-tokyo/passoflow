@@ -11,6 +11,7 @@ publish = false
 workspace = true
 
 [dependencies]
+passoflow-core = { path = "../passoflow-core" }
 serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
 thiserror = "2"
-

@@ -237,7 +237,9 @@ dependencies = [
 name = "passoflow-web"
 version = "0.1.2"
 dependencies = [
+ "passoflow-core",
  "serde",
+ "serde_yaml",
  "thiserror",
 ]
 
