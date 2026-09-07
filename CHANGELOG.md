@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Strengthened the release wheel smoke test to require the exported `DomBrowser` API.
 - Added per-platform wheel smoke jobs for Linux, Windows, and macOS before PyPI publication.
 - Added the publishable `passoflow` umbrella crate as the stable Rust entry point.
+- Published `passoflow` 0.1.2 to crates.io through the guarded GitHub Actions workflow.
 - Fixed user-guide image links to match the local `/docs/assets` route and restored UI smoke coverage.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.

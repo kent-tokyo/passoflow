@@ -19,7 +19,7 @@ compatibility baseline until each phase passes its gate.
 
 | Crate | Responsibility | Status |
 | --- | --- | --- |
-| `passoflow` | Stable umbrella crate re-exporting the published platform-independent contract | Local package ready; crates.io publication pending |
+| `passoflow` | Stable umbrella crate re-exporting the published platform-independent contract | 0.1.2 published to crates.io |
 | `passoflow-core` | Scenario model, YAML validation, normalization, diagnostics, execution plan | Implemented |
 | `passoflow-engine` | Retry, warning/failure outcomes, stop requests, step-attempt events | Initial runner implemented |
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |
@@ -186,6 +186,7 @@ input to the operating system.
 The remaining migration work is validating the WebSocket adapter against a live
 Chromium endpoint, moving variable and control-flow execution behind the Rust
 engine, a local Rust-compatible API, platform wheels, runtime permission
-guidance, and PyPI installation verification. `passoflow-core` and the
-`passoflow-python` crate are published; the Python wheel remains open. See the
+guidance, and PyPI installation verification. `passoflow`, `passoflow-core`,
+and the `passoflow-python` crate are published; the Python wheel remains open.
+See the
 [roadmap](../ROADMAP.md) for the phase order and completion criteria.
