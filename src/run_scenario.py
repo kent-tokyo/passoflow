@@ -393,7 +393,7 @@ def _image_search_kwargs(step: dict) -> dict:
 
 
 def _run_click_image(step: dict, variables: dict[str, str]) -> None:
-    images = [SCENARIOS_DIR / image for image in step["images"]]
+    images = [resolve_scenario_path(SCENARIOS_DIR, image) for image in step["images"]]
     click_image(
         images,
         double_click=step.get("click_type") == "double",
@@ -403,7 +403,7 @@ def _run_click_image(step: dict, variables: dict[str, str]) -> None:
 
 
 def _run_move_mouse_to_image(step: dict, variables: dict[str, str]) -> None:
-    images = [SCENARIOS_DIR / image for image in step["images"]]
+    images = [resolve_scenario_path(SCENARIOS_DIR, image) for image in step["images"]]
     move_mouse_to_image(images, **_image_search_kwargs(step))
 
 
@@ -560,7 +560,7 @@ def _run_with_rust_engine(
 
 def _run_call_scenario(step: dict, variables: dict[str, str], runtime_state: dict[str, str] | None = None) -> None:
     """Run another scenario file's steps inline, sharing the current variables."""
-    steps = _load_steps(SCENARIOS_DIR / step["path"])
+    steps = _load_steps(resolve_scenario_path(SCENARIOS_DIR, step["path"]))
     # Don't emit progress markers for the nested run: its step numbers are relative to the
     # sub-scenario, not the caller's, so the web UI keeps highlighting this call_scenario step.
     _run_steps(steps, variables, emit_progress=False, runtime_state=runtime_state)
@@ -568,7 +568,7 @@ def _run_call_scenario(step: dict, variables: dict[str, str], runtime_state: dic
 
 def _run_repeat(step: dict, variables: dict[str, str], runtime_state: dict[str, str] | None = None) -> None:
     """Run another scenario file's steps inline, `count` times, sharing the current variables."""
-    steps = _load_steps(SCENARIOS_DIR / step["path"])
+    steps = _load_steps(resolve_scenario_path(SCENARIOS_DIR, step["path"]))
     count = int(step["count"])
     for i in range(count):
         logger.info("Repeat %d/%d: %s", i + 1, count, step["path"])
@@ -877,7 +877,12 @@ def _validate_step(step: dict, label: str, errors: list[str], warnings: list[str
 
     if action in _IMAGE_ACTIONS and isinstance(step.get("images"), list):
         for image in step["images"]:
-            if not (SCENARIOS_DIR / image).is_file():
+            try:
+                image_path = resolve_scenario_path(SCENARIOS_DIR, image)
+            except ValueError as error:
+                errors.append(f"{label} ({action}): {error}")
+                continue
+            if not image_path.is_file():
                 warnings.append(f"{label} ({action}): image file not found: {image}")
     if action == "click_image" and "click_type" in step and step["click_type"] not in _CLICK_TYPES:
         errors.append(

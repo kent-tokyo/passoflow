@@ -91,6 +91,8 @@ The same concepts are exposed by `passoflow-core` as
   a partially executed run.
 - Nested scenario paths are resolved under the scenario root with symlink-aware
   traversal checks before validation or Rust bundle loading.
+- Image templates and compatibility-runner nested calls use the same resolver,
+  preventing a path outside the scenario root from reaching an OS adapter.
 - Callback results are parsed as the complete typed `RuntimeActionResult`;
   malformed JSON or missing outcome fields fail closed as an adapter error.
 - Callback warnings use the same action outcome contract as the Python runner:
