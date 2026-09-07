@@ -159,6 +159,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] callback runner APIを変更せず、ローカルRust DOM backendをPython bindingから公開する。
 - [x] Pythonの`web_actions`からRust DOM bindingへ委譲するopt-in経路を追加する。
 - [x] 再利用可能な`passoflow-core`をcrates.ioへ公開する。engineはインターフェースが安定してから公開する。
+- [x] 安定したcore契約を再exportする公開可能な`passoflow` umbrella crateを追加する。
 - [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。
 - [x] 0.1.2 wheelをローカルビルドし、クリーンな仮想環境で公開APIを検証する。

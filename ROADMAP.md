@@ -160,6 +160,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Add an opt-in `web_actions` delegation path from Python to the Rust DOM binding.
 - [x] Publish the reusable `passoflow-core` interface to crates.io; publish the
   engine only after its interface is stable.
+- [x] Add a publishable `passoflow` umbrella crate that re-exports the stable core contract.
 - [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
 - [x] Build the 0.1.2 wheel locally and verify its exported API in a clean virtual environment.

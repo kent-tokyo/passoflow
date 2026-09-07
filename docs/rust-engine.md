@@ -19,6 +19,7 @@ compatibility baseline until each phase passes its gate.
 
 | Crate | Responsibility | Status |
 | --- | --- | --- |
+| `passoflow` | Stable umbrella crate re-exporting the published platform-independent contract | Local package ready; crates.io publication pending |
 | `passoflow-core` | Scenario model, YAML validation, normalization, diagnostics, execution plan | Implemented |
 | `passoflow-engine` | Retry, warning/failure outcomes, stop requests, step-attempt events | Initial runner implemented |
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |

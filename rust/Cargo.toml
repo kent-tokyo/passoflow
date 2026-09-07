@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/passoflow",
     "crates/passoflow-core",
     "crates/passoflow-input",
     "crates/passoflow-capture",

@@ -1,0 +1,17 @@
+[package]
+name = "passoflow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "PassoFlow's stable Rust entry point for local automation contracts"
+repository.workspace = true
+license.workspace = true
+readme = "README.md"
+keywords = ["automation", "rpa", "workflow"]
+categories = ["automation", "development-tools"]
+
+[lints]
+workspace = true
+
+[dependencies]
+passoflow-core = { version = "0.1.2", path = "../passoflow-core" }
