@@ -89,6 +89,8 @@ pub enum BrowserError {
     MissingParameter(String),
     #[error("DOM selector must not be empty")]
     EmptySelector,
+    #[error("invalid DOM selector: {0}")]
+    InvalidSelector(String),
     #[error("browser URL must use http or https: {url}")]
     InvalidUrl { url: String },
     #[error("browser wait timeout must be greater than zero")]
@@ -97,6 +99,34 @@ pub enum BrowserError {
     InvalidWaitState(String),
     #[error("browser backend is unavailable: {0}")]
     BackendUnavailable(String),
+}
+
+/// A concise element sample returned by selector preview.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectorSample {
+    pub tag: String,
+    pub text: String,
+    pub id: String,
+    pub testid: String,
+    pub visible: bool,
+    pub selector: String,
+}
+
+/// Selector candidates that may repair a selector after a page change.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectorRepair {
+    pub selector: String,
+    pub count: u64,
+}
+
+/// Read-only selector inspection result from the current browser page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectorPreview {
+    pub selector: String,
+    pub count: u64,
+    pub samples: Vec<SelectorSample>,
+    pub suggested_selector: Option<String>,
+    pub repair_suggestions: Vec<SelectorRepair>,
 }
 
 /// Backend boundary for a real DOM browser implementation.
@@ -373,18 +403,46 @@ impl<T: CdpTransport> BrowserBackend for CdpBrowser<T> {
 }
 
 impl<T: CdpTransport> CdpBrowser<T> {
+    /// Preview selector matches without mutating the page or scenario state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a validation error for an empty or invalid selector and a
+    /// backend error when the browser cannot evaluate the inspection script.
+    pub fn preview_selector(&mut self, selector: &str) -> Result<SelectorPreview, BrowserError> {
+        if selector.trim().is_empty() {
+            return Err(BrowserError::EmptySelector);
+        }
+        let selector = json_string(selector.trim());
+        let expression = format!(
+            "(() => {{ try {{ const s = {selector}; const elements = [...document.querySelectorAll(s)]; const esc = value => CSS.escape(value); const stable = element => element.id ? '#' + esc(element.id) : element.getAttribute('data-testid') ? '[data-testid=\"' + element.getAttribute('data-testid').replaceAll('\\\\', '\\\\\\\\').replaceAll('\"', '\\\"') + '\"]' : element.tagName.toLowerCase() + [...element.classList].filter(Boolean).slice(0, 2).map(name => '.' + esc(name)).join(''); const samples = elements.slice(0, 5).map(element => ({{ tag: element.tagName.toLowerCase(), text: (element.innerText || element.getAttribute('aria-label') || '').trim().slice(0, 120), id: element.id || '', testid: element.getAttribute('data-testid') || '', visible: !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length), selector: stable(element) }})); const repairs = []; if (!elements.length) {{ const id = s.match(/^(?:[a-zA-Z][\\w-]*)?#([\\w-]+)$/); const testid = s.match(/^\\[data-testid=[\\\"']([^\\\"']+)[\\\"']\\]$/); const className = s.match(/^(?:[a-zA-Z][\\w-]*)?\\.([\\w-]+)$/); const candidates = id ? ['[data-testid=\"' + id[1] + '\"]', '[name=\"' + id[1] + '\"]'] : testid ? ['#' + testid[1], '[aria-label=\"' + testid[1] + '\"]'] : className ? ['[class~=\"' + className[1] + '\"]'] : []; for (const candidate of candidates) {{ const count = document.querySelectorAll(candidate).length; if (count) repairs.push({{ selector: candidate, count }}); }} }} return {{ selector: s, count: elements.length, samples, suggested_selector: elements.length ? stable(elements[0]) : null, repair_suggestions: repairs }}; }} catch (error) {{ return {{ invalid_selector: String(error) }}; }} }})()"
+        );
+        let value = self.evaluate_value(&expression)?;
+        if let Some(error) = value.get("invalid_selector").and_then(Value::as_str) {
+            return Err(BrowserError::InvalidSelector(error.to_owned()));
+        }
+        serde_json::from_value(value).map_err(|error| {
+            BrowserError::BackendUnavailable(format!("decode selector preview: {error}"))
+        })
+    }
+
     fn evaluate(&mut self, expression: &str) -> Result<bool, BrowserError> {
+        let value = self.evaluate_value(expression)?;
+        value.as_bool().ok_or_else(|| {
+            BrowserError::BackendUnavailable("CDP evaluation returned no boolean value".to_owned())
+        })
+    }
+
+    fn evaluate_value(&mut self, expression: &str) -> Result<Value, BrowserError> {
         let result = self.transport.command(
             "Runtime.evaluate",
             json!({"expression": expression, "returnByValue": true}),
         )?;
         result
             .pointer("/result/result/value")
-            .and_then(Value::as_bool)
+            .cloned()
             .ok_or_else(|| {
-                BrowserError::BackendUnavailable(
-                    "CDP evaluation returned no boolean value".to_owned(),
-                )
+                BrowserError::BackendUnavailable("CDP evaluation returned no value".to_owned())
             })
     }
 }
@@ -539,7 +597,8 @@ pub fn execute<B: BrowserBackend>(
 mod tests {
     use super::{
         BrowserAction, BrowserBackend, BrowserError, CdpBrowser, CdpTransport, CdpWire,
-        JsonCdpTransport, RecordingBrowser, WaitState, execute,
+        JsonCdpTransport, RecordingBrowser, SelectorPreview, SelectorRepair, SelectorSample,
+        WaitState, execute,
     };
     use serde_json::{Value, json};
 
@@ -656,11 +715,21 @@ mod tests {
     #[derive(Debug, Default)]
     struct RecordingCdp {
         commands: Vec<(String, Value)>,
+        preview: bool,
     }
 
     impl CdpTransport for RecordingCdp {
         fn command(&mut self, method: &str, params: Value) -> Result<Value, BrowserError> {
             self.commands.push((method.to_owned(), params));
+            if self.preview {
+                return Ok(json!({"result": {"result": {"value": {
+                    "selector": "#submit",
+                    "count": 1,
+                    "samples": [{"tag": "button", "text": "Submit", "id": "submit", "testid": "", "visible": true, "selector": "#submit"}],
+                    "suggested_selector": "#submit",
+                    "repair_suggestions": [{"selector": "[data-testid=\"submit\"]", "count": 1}]
+                }}}}));
+            }
             if method == "Runtime.evaluate" {
                 Ok(json!({"result": {"result": {"value": true}}}))
             } else {
@@ -759,5 +828,38 @@ mod tests {
             transport.command("Page.enable", json!({})),
             Err(BrowserError::BackendUnavailable(message)) if message.contains("expected 1")
         ));
+    }
+
+    #[test]
+    fn previews_selector_matches_and_rejects_empty_selector() {
+        let mut browser = CdpBrowser::new(RecordingCdp {
+            commands: Vec::new(),
+            preview: true,
+        });
+        let preview = browser.preview_selector("#submit").expect("preview");
+        assert_eq!(
+            preview,
+            SelectorPreview {
+                selector: "#submit".to_owned(),
+                count: 1,
+                samples: vec![SelectorSample {
+                    tag: "button".to_owned(),
+                    text: "Submit".to_owned(),
+                    id: "submit".to_owned(),
+                    testid: String::new(),
+                    visible: true,
+                    selector: "#submit".to_owned(),
+                }],
+                suggested_selector: Some("#submit".to_owned()),
+                repair_suggestions: vec![SelectorRepair {
+                    selector: "[data-testid=\"submit\"]".to_owned(),
+                    count: 1,
+                }],
+            }
+        );
+        assert_eq!(
+            browser.preview_selector(" "),
+            Err(BrowserError::EmptySelector)
+        );
     }
 }

@@ -140,7 +140,7 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 - [x] Prototype a Rust Chromium adapter boundary using injected CDP commands for navigation and DOM operations.
 - [x] Define a correlated JSON CDP transport boundary that is independent of the wire implementation.
 - [x] Select and integrate a production Rust WebSocket/CDP transport for local `ws://` Chromium endpoints.
-- [ ] Port navigation, click, fill, wait, selector preview, and selector recovery diagnostics.
+- [x] Port navigation, click, fill, wait, selector preview, and selector recovery diagnostics to the Rust DOM boundary.
 - [x] Implement the initial `passoflow-engine` execution boundary with retries, safety stop semantics, and structured events.
 - [x] Add the initial Rust `click_image` `StepExecutor` with injected template loading and capture/search/click policy.
 - [x] Add `move_mouse_to_image` execution with the same region, retry, confidence, and target-window safety policy.

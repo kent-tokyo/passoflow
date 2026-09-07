@@ -140,7 +140,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] CDP commandを注入するRust Chromium adapter境界を試作し、遷移とDOM操作を生成する。
 - [x] wire実装から独立した、ID相関付きJSON CDP transport境界を定義する。
 - [x] ローカル`ws://` Chromium endpoint向けの本番Rust WebSocket/CDP transportを選定・統合する。
-- [ ] 遷移、クリック、入力、待機、セレクタプレビュー、復旧診断を移植する。
+- [x] 遷移、クリック、入力、待機、セレクタプレビュー、復旧診断をRust DOM境界へ移植する。
 - [x] リトライ、安全停止、構造化イベントを扱う`passoflow-engine`初期実行境界を実装する。
 - [x] template読み込みを注入でき、capture/search/clickポリシーを使うRust `click_image`初期`StepExecutor`を追加する。
 - [x] 同じregion、retry、confidence、target-window安全ポリシーで`move_mouse_to_image`を実行する。

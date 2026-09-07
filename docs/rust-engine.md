@@ -93,12 +93,16 @@ The same concepts are exposed by `passoflow-core` as
   steps into typed, validated DOM operations before a backend is called.
 - `CdpBrowser` implements the DOM backend over an injected `CdpTransport`.
   It emits `Page.navigate` and `Runtime.evaluate` commands for navigation,
-  click, fill, and selector-state waits. A production WebSocket transport is
-  intentionally a separate follow-up so the command contract remains testable.
+  click, fill, and selector-state waits. The optional WebSocket wire connects
+  this contract to local Chromium without changing the browser action API.
 - `JsonCdpTransport` now owns CDP command IDs, ignores protocol events, and
   fails closed on malformed, failed, or mismatched responses. The optional
   `websocket` feature provides `WebSocketCdpWire` for local `ws://` Chromium
   endpoints; it is kept optional so the default core remains dependency-light.
+- `CdpBrowser::preview_selector` provides read-only match counts, representative
+  element metadata, a stable selector suggestion, and conservative repair
+  candidates for common id, `data-testid`, and class selectors. Invalid CSS is
+  reported as an error rather than guessed.
 - `ExecutionPlan::resolve_variables` provides non-mutating, recursive
   `{{variable}}` expansion for native executors. Unset variables resolve to an
   empty string for compatibility with the Python runner.
