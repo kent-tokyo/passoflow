@@ -101,6 +101,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Python validationとRust展開でsymlinkにも対応したscenario root path policyを共通適用する。
 - [x] image templateと互換runnerのnested実行にもscenario root policyを適用する。
 - [x] scenario rootのfile policyを英日action referenceに明記する。
+- [x] UI smokeのcontract検査を依存なしPython action contract moduleに合わせて維持する。
 - [x] run-levelの`stopped` statusとaction eventのoutcomeを分離して検証する。
 - [x] runtime report境界でstep番号に見せかけたboolean値を拒否する。
 - [x] 公開wheelのsmoke testでwarning contract APIのexportを必須検証する。

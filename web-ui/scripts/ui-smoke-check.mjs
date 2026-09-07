@@ -164,11 +164,12 @@ async function checkRegionPreview() {
 
 async function checkOutcomeContract() {
   const runner = await source("../src/run_scenario.py")
+  const contract = await source("../src/action_contract.py")
   const server = await source("../src/api_server.py")
   const tests = await source("../tests/test_run_scenario_outcomes.py")
 
   assert.match(runner, /action_outcome_contract/)
-  assert.match(runner, /_WARNING_CONTINUE_ACTIONS/)
+  assert.match(contract, /WARNING_CONTINUE_ACTIONS/)
   assert.match(server, /"outcomes": action_outcome_contract/)
   assert.match(tests, /test_action_outcome_contract_marks_recoverable_warnings/)
 }
