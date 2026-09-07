@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 VALID_STATUSES = {"success", "warning_continue", "failure_stop", "stopped"}
+VALID_EVENT_OUTCOMES = {"success", "warning_continue", "failure_stop"}
 
 
 def validate_runtime_report(report: object) -> dict:
@@ -18,6 +19,6 @@ def validate_runtime_report(report: object) -> dict:
     for event in events:
         if not isinstance(event, dict) or not isinstance(event.get("step"), int):
             raise RuntimeError("Rust engine returned a malformed event")
-        if event.get("outcome") not in VALID_STATUSES:
+        if event.get("outcome") not in VALID_EVENT_OUTCOMES:
             raise RuntimeError("Rust engine returned an invalid event outcome")
     return report

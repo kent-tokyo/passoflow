@@ -21,6 +21,7 @@ class RuntimeReportTests(unittest.TestCase):
             {"events": []},
             {"status": "success"},
             {"status": "success", "events": [{"step": 1, "outcome": "unknown"}]},
+            {"status": "stopped", "events": [{"step": 1, "outcome": "stopped"}]},
             {"status": "success", "events": [{"step": "1", "outcome": "success"}]},
         ]
         for report in invalid_reports:

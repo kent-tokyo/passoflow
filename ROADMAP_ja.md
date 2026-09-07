@@ -97,6 +97,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Rust部分再実行でもprogressとeventのstep番号を元シナリオのglobal番号で維持する。
 - [x] guarded再実行の範囲を統一検証し、不正なrangeをdispatch前に拒否する。
 - [x] Web UIへeventを渡す前にRust runtime reportのstatusとevent形状を検証する。
+- [x] run-levelの`stopped` statusとaction eventのoutcomeを分離して検証する。
 - [x] 公開wheelのsmoke testでwarning contract APIのexportを必須検証する。
 - [x] 起動準備チェックを分離し、OS processを起動せずに早期終了とwindow timeoutをテストする。
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。

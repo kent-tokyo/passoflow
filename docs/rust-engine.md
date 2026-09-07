@@ -170,6 +170,8 @@ The same concepts are exposed by `passoflow-core` as
 - The Python runner validates the Rust report status and event shape before
   forwarding events to the existing UI log stream; malformed reports fail
   closed.
+- `stopped` is valid only for the run status, not for an individual action
+  event outcome.
 - Partial rerun bounds are 1-indexed, inclusive, and fail closed for zero,
   negative, reversed, or out-of-range values.
 - The Python runner logs those returned artifact paths, so the existing Web UI
