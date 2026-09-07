@@ -86,6 +86,9 @@ The same concepts are exposed by `passoflow-core` as
   recoverable image/search warnings produce `warning_continue`, while
   non-recoverable warnings from DOM and other stop-on-warning actions produce
   `failure_stop` with local failure artifacts.
+- The warning policy is exposed by `passoflow-core` and
+  `passoflow-python.action_outcome_contract_json`; the Python callback keeps a
+  compatibility fallback when the optional binding is unavailable.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.

@@ -127,6 +127,18 @@ def _rust_warning_outcome(action: str, step: dict, warned: bool) -> str:
     if not warned:
         return "success"
     contract = action_outcome_contract(action, step)
+    try:
+        import passoflow_python
+
+        rust_contract = json.loads(
+            passoflow_python.action_outcome_contract_json(action, step.get("on_error"))
+        )
+        if isinstance(rust_contract, dict) and isinstance(rust_contract.get("warning_continue"), bool):
+            contract = rust_contract
+    except (ImportError, AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        # Keep the Python contract as a compatibility fallback for source checkouts
+        # that do not have the optional binding installed.
+        pass
     return "warning_continue" if contract["warning_continue"] else "failure_stop"
 
 # Tables loaded by load_table steps, keyed by their `name`, for loop_table blocks to iterate

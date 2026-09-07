@@ -2,7 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use passoflow_core::{CONTRACT_VERSION, RetryPolicy, Scenario, action_schema, step_meta_keys};
+use passoflow_core::{
+    CONTRACT_VERSION, RetryPolicy, Scenario, action_outcome_contract, action_schema, step_meta_keys,
+};
 use passoflow_engine::{
     NoopSleeper, RuntimeActionResult, RuntimeState, RuntimeStepExecutor,
     run_with_runtime_state_and_tables,
@@ -150,6 +152,14 @@ fn action_schema_json() -> PyResult<String> {
     .map_err(|error| PyRuntimeError::new_err(error.to_string()))
 }
 
+/// Return the stable warning outcome contract for one action as JSON.
+#[pyfunction]
+#[pyo3(signature = (action, on_error=None))]
+fn action_outcome_contract_json(action: &str, on_error: Option<&str>) -> PyResult<String> {
+    to_string(&action_outcome_contract(action, on_error))
+        .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+}
+
 /// Return local native input capabilities and permission diagnostics as JSON.
 #[pyfunction]
 fn input_platform_info_json() -> PyResult<String> {
@@ -278,6 +288,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(expand_nested_steps, module)?)?;
     module.add_function(wrap_pyfunction!(contract_version, module)?)?;
     module.add_function(wrap_pyfunction!(action_schema_json, module)?)?;
+    module.add_function(wrap_pyfunction!(action_outcome_contract_json, module)?)?;
     module.add_function(wrap_pyfunction!(input_platform_info_json, module)?)?;
     module.add_function(wrap_pyfunction!(run_runtime_state, module)?)?;
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -286,7 +297,9 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{expand_nested_steps, input_platform_info_json, validate_yaml};
+    use super::{
+        action_outcome_contract_json, expand_nested_steps, input_platform_info_json, validate_yaml,
+    };
     use serde_json::Value;
 
     #[test]
@@ -296,6 +309,17 @@ mod tests {
         assert_eq!(result["contract"], "0.1");
         assert_eq!(result["valid"], true);
         assert!(result["execution_plan"]["steps"].is_array());
+    }
+
+    #[test]
+    fn exposes_action_warning_contract_as_json() {
+        let result = action_outcome_contract_json("browser_click", None).expect("JSON result");
+        let result: Value = serde_json::from_str(&result).expect("valid JSON");
+        assert_eq!(result["warning_continue"], false);
+        let result =
+            action_outcome_contract_json("send_webhook", Some("continue")).expect("JSON result");
+        let result: Value = serde_json::from_str(&result).expect("valid JSON");
+        assert_eq!(result["warning_continue"], true);
     }
 
     #[test]

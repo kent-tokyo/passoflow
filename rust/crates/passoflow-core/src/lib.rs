@@ -103,6 +103,48 @@ pub struct ActionDefinition {
     pub optional: Vec<String>,
 }
 
+/// Whether a warning from an action may be allowed to continue execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct ActionOutcomeContract {
+    pub success: bool,
+    pub warning_continue: bool,
+    pub failure_stop: bool,
+}
+
+const WARNING_CONTINUE_ACTIONS: &[&str] = &[
+    "activate_window",
+    "copy_file",
+    "create_excel_sheet",
+    "delete_excel_row",
+    "delete_excel_sheet",
+    "get_excel_value",
+    "load_table",
+    "map_network_drive",
+    "move_file",
+    "move_mouse_to_image",
+    "click_image",
+    "rename_file",
+    "run_excel_macro",
+    "save_excel_file",
+    "set_excel_value",
+    "sort_excel_range",
+];
+
+/// Return the stable warning policy for one action.
+#[must_use]
+pub fn action_outcome_contract(action: &str, on_error: Option<&str>) -> ActionOutcomeContract {
+    let warning_continue = if action == "send_webhook" {
+        on_error.unwrap_or("continue") == "continue"
+    } else {
+        WARNING_CONTINUE_ACTIONS.contains(&action)
+    };
+    ActionOutcomeContract {
+        success: true,
+        warning_continue,
+        failure_stop: true,
+    }
+}
+
 /// A stable, machine-readable validation result.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diagnostic {
@@ -1600,6 +1642,14 @@ mod tests {
             serde_json::to_value(result).expect("result should serialize")["outcome"],
             "warning_continue"
         );
+    }
+
+    #[test]
+    fn exposes_action_warning_contract_for_rust_bridges() {
+        assert!(super::action_outcome_contract("click_image", None).warning_continue);
+        assert!(!super::action_outcome_contract("browser_click", None).warning_continue);
+        assert!(super::action_outcome_contract("send_webhook", None).warning_continue);
+        assert!(!super::action_outcome_contract("send_webhook", Some("stop")).warning_continue);
     }
 
     #[test]

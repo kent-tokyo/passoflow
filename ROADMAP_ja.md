@@ -85,6 +85,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Rust-backed runner経路でlive progress markerとstep前後のscreenshot artifactを維持する。
 - [x] Rust eventから既存Python/Web UIのlog streamへfailure artifactを完全に引き渡す。
 - [x] Rust callback bridgeでもactionごとのwarning outcome contractを適用し、継続不可のwarningで停止する。
+- [x] actionごとのwarning outcome contractをRust coreから公開し、Python callback bridgeから利用する。
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
