@@ -166,6 +166,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Run a live Chromium CDP smoke test from the clean wheel for navigation, waiting, selector preview, and click.
 - [x] Verify Rust DOM fill, click, wait, and selector preview against a reusable local HTML fixture.
 - [x] Require the release workflow wheel smoke test to assert the exported `DomBrowser` API.
+- [x] Add per-platform release workflow smoke tests for Linux, Windows, and macOS wheels.
 - [x] Register the `passoflow` GitHub Actions Trusted Publisher configuration for the `release.yml` / `pypi` environment.
 - [x] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.
 

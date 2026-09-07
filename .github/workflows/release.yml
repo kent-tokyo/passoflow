@@ -92,9 +92,46 @@ jobs:
           assert any(name.endswith("/python/passoflow_python/__init__.pyi") for name in names)
           PY
 
+  platform-wheel-smoke:
+    name: Verify ${{ matrix.os }} wheel
+    needs: wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-${{ matrix.os }}
+          path: wheel
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install and import wheel
+        shell: bash
+        run: |
+          python -m venv wheel-venv
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            PYTHON=wheel-venv/Scripts/python
+          else
+            PYTHON=wheel-venv/bin/python
+          fi
+          "$PYTHON" -m pip install --quiet --no-deps wheel/*.whl
+          "$PYTHON" - <<'PY'
+          import json
+          import passoflow_python
+
+          assert passoflow_python.__version__
+          assert passoflow_python.contract_version() == "0.1"
+          assert hasattr(passoflow_python, "DomBrowser")
+          result = json.loads(passoflow_python.validate_yaml("title: Smoke\nsteps: []\n"))
+          assert result["valid"] is True
+          PY
+
   publish:
     name: Publish to PyPI
-    needs: [wheels, sdist, package-smoke]
+    needs: [wheels, sdist, package-smoke, platform-wheel-smoke]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
