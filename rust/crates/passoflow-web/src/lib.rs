@@ -1,8 +1,8 @@
 //! OS-independent DOM browser contracts for `PassoFlow`.
 //!
 //! This crate intentionally does not launch a browser or make network calls.
-//! A future CDP/Chromium adapter can implement [`BrowserBackend`] without
-//! changing the scenario-facing operation contract.
+//! A CDP/Chromium adapter can implement [`BrowserBackend`] without changing
+//! the scenario-facing operation contract.
 
 #![forbid(unsafe_code)]
 
@@ -341,6 +341,20 @@ impl<T> CdpBrowser<T> {
     #[must_use]
     pub fn into_transport(self) -> T {
         self.transport
+    }
+}
+
+#[cfg(feature = "websocket")]
+impl CdpBrowser<JsonCdpTransport<WebSocketCdpWire>> {
+    /// Connect a Rust DOM backend to a local Chromium `DevTools` endpoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the WebSocket endpoint cannot be opened.
+    pub fn connect(endpoint: &str) -> Result<Self, BrowserError> {
+        Ok(Self::new(JsonCdpTransport::new(WebSocketCdpWire::connect(
+            endpoint,
+        )?)))
     }
 }
 

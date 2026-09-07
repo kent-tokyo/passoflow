@@ -99,6 +99,8 @@ The same concepts are exposed by `passoflow-core` as
   fails closed on malformed, failed, or mismatched responses. The optional
   `websocket` feature provides `WebSocketCdpWire` for local `ws://` Chromium
   endpoints; it is kept optional so the default core remains dependency-light.
+- With the `websocket` feature, `CdpBrowser::connect(endpoint)` composes the
+  wire and JSON transport into one local DOM backend constructor.
 - `CdpBrowser::preview_selector` provides read-only match counts, representative
   element metadata, a stable selector suggestion, and conservative repair
   candidates for common id, `data-testid`, and class selectors. Invalid CSS is
