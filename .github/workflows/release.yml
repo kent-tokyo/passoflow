@@ -9,8 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  version-preflight:
+    name: Check release version metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version files and release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          test -n "$version"
+          grep -qx "version = \"$version\"" rust/Cargo.toml || {
+            echo "rust workspace version does not match VERSION" >&2
+            exit 1
+          }
+          grep -qx "version = \"$version\"" rust/crates/passoflow-python/Cargo.toml || {
+            echo "passoflow-python version does not match VERSION" >&2
+            exit 1
+          }
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            test "${GITHUB_REF_NAME#v}" = "$version"
+          fi
+
   wheels:
     name: Build wheel (${{ matrix.os }})
+    needs: version-preflight
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -32,6 +56,7 @@ jobs:
 
   sdist:
     name: Build source distribution
+    needs: version-preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -139,7 +164,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [wheels, sdist, package-smoke, platform-wheel-smoke]
+    needs: [version-preflight, wheels, sdist, package-smoke, platform-wheel-smoke]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
