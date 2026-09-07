@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PassoFlow Rust DOM E2E fixture</title>
+  </head>
+  <body>
+    <main>
+      <label for="name">Name</label>
+      <input id="name" name="name" data-testid="name-input" type="text">
+      <button id="submit" type="button">Submit</button>
+      <p id="result" hidden></p>
+    </main>
+    <script>
+      document.querySelector("#submit").addEventListener("click", () => {
+        const result = document.querySelector("#result");
+        result.textContent = `Hello, ${document.querySelector("#name").value}`;
+        result.hidden = false;
+      });
+    </script>
+  </body>
+</html>

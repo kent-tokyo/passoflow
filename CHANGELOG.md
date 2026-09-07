@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added opt-in Python `web_actions` delegation to `DomBrowser` through a local CDP endpoint.
 - Exported `DomBrowser` from the Python package namespace and added its type stub.
 - Verified the clean 0.1.2 wheel against a live local Chromium CDP page.
+- Added a reusable DOM fixture and verified Rust fill/click/wait/preview end to end.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

@@ -142,8 +142,8 @@ The same concepts are exposed by `passoflow-core` as
   the scenario action names.
 - A macOS arm64 0.1.2 wheel was installed into a clean venv and used against a
   live Chromium page for navigate, visible wait, selector preview, and click.
-  The smoke page had no input element, so fill remains covered by unit tests
-  and awaits an editable-page E2E fixture.
+  A reusable HTML fixture also verifies fill, click, result waiting, and preview
+  together; the observed result was `Hello, Rust E2E`.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
