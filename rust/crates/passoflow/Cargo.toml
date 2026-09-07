@@ -8,7 +8,7 @@ repository.workspace = true
 license.workspace = true
 readme = "README.md"
 keywords = ["automation", "rpa", "workflow"]
-categories = ["automation", "development-tools"]
+categories = ["development-tools", "command-line-utilities"]
 
 [lints]
 workspace = true
