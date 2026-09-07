@@ -139,10 +139,27 @@ pub fn ensure_target_window(
 /// only; alpha is intentionally ignored. No implicit scaling or color-space
 /// conversion is performed, so callers must capture templates at the same
 /// display scale as the target frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MatchColorSpace {
+    /// 8-bit sRGB channel values are compared directly.
+    Srgb,
+}
+
+/// Scaling policy for deterministic template matching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MatchScaling {
+    /// Template and frame dimensions must already be identical in pixel scale.
+    ExactPixels,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SearchConfig {
     pub confidence_threshold: f64,
     pub ambiguity_margin: f64,
+    pub color_space: MatchColorSpace,
+    pub scaling: MatchScaling,
 }
 
 /// Retry controls for screen-search operations. `attempts` is the total
@@ -188,6 +205,8 @@ impl Default for SearchConfig {
         Self {
             confidence_threshold: 0.8,
             ambiguity_margin: 0.02,
+            color_space: MatchColorSpace::Srgb,
+            scaling: MatchScaling::ExactPixels,
         }
     }
 }
@@ -1060,10 +1079,10 @@ fn confidence_at(frame: &ImageFrame, template: &ImageFrame, left: usize, top: us
 mod tests {
     use super::{
         ActiveWindow, ClickDecision, ClickOptions, FileTemplateLoader, ImageStepExecutor,
-        MatchCandidate, MatchDecision, MatchLocation, MatchPoint, MatchPosition, RegionOrigin,
-        SearchConfig, SearchOptions, Template, TemplateLoader, VisionError, WindowContextProvider,
-        capture_and_click, capture_and_move, click_match_guarded, ensure_target_window,
-        resolve_search_region, round_half_even, search,
+        MatchCandidate, MatchColorSpace, MatchDecision, MatchLocation, MatchPoint, MatchPosition,
+        MatchScaling, RegionOrigin, SearchConfig, SearchOptions, Template, TemplateLoader,
+        VisionError, WindowContextProvider, capture_and_click, capture_and_move,
+        click_match_guarded, ensure_target_window, resolve_search_region, round_half_even, search,
     };
     use passoflow_capture::{
         CaptureBackend, CaptureError, CaptureRegion, CapturedFrame, ImageFrame, Origin,
@@ -1087,6 +1106,13 @@ mod tests {
             )
             .expect("fixture dimensions should match"),
         }
+    }
+
+    #[test]
+    fn matching_policy_defaults_to_direct_srgb_pixels() {
+        let config = SearchConfig::default();
+        assert_eq!(config.color_space, MatchColorSpace::Srgb);
+        assert_eq!(config.scaling, MatchScaling::ExactPixels);
     }
 
     fn red_pixel_template(name: &str) -> Template {

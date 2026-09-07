@@ -129,7 +129,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Rust画像executorからstepごとの`click_indicator_duration`をinput controllerへ渡す。
 - [x] 検索設定とクリック設定を注入できるcapture-search-guard-click一体型パイプラインを公開する。
 - [x] Windows adapterのwindow情報をvisionの安全ポリシーへ変換する境界を追加する。
-- [ ] 決定的なテンプレート検索の表示倍率・色空間の仕様を定義する。
+- [x] 決定的なテンプレート検索の表示倍率・色空間の仕様を定義する（sRGBのチャンネル値を比較し、alphaは無視、ピクセル寸法は一致必須、暗黙の変換なし）。
 - [x] exact pixel、RGBのみ、暗黙の倍率変更なしという初期検索仕様を定義する。
 - [x] 固定画像の精度テストと依存の少ない検索benchmarkを追加する。
 - [x] 曖昧な一致や信頼度未満では自動クリックしない安全制御を維持する。

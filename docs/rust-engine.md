@@ -83,8 +83,8 @@ The same concepts are exposed by `passoflow-core` as
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.
-- Image actions use exact-size RGB matching with no implicit scaling. Search
-  supports candidate priority, confidence, retry, regions, anchors/offsets,
+- Image actions use exact-size sRGB matching with no implicit scaling or color
+  conversion; alpha is ignored. Search supports candidate priority, confidence, retry, regions, anchors/offsets,
   active-window regions, target-window guards, and ambiguity-safe clicks.
 - The initial Rust image executor covers `click_image` and
   `move_mouse_to_image`; the existing Python runner still executes the full

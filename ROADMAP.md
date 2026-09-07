@@ -129,7 +129,7 @@ Gate: basic input actions work on the stated platform matrix with explicit permi
 - [x] Pass per-step `click_indicator_duration` from the Rust image executor to the input controller.
 - [x] Expose one capture-search-guard-click pipeline with injectable search and click options.
 - [x] Add the Windows adapter-to-vision window-context conversion boundary.
-- [ ] Define scaling and color-space behavior for deterministic template matching.
+- [x] Define scaling and color-space behavior for deterministic template matching (`sRGB` channel comparison, alpha ignored, exact pixel dimensions, and no implicit conversion).
 - [x] Define the initial exact-pixel/RGB-only/no-implicit-scaling matching behavior.
 - [x] Add fixed-image accuracy tests and a dependency-light search benchmark.
 - [x] Preserve ambiguous-match safety: no automatic click when the result is below the configured confidence or cannot be uniquely selected.
