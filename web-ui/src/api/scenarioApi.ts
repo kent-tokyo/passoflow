@@ -32,6 +32,13 @@ export interface EnvironmentStatus {
     supported: boolean
     capture: "ready" | "blocked" | "unknown"
     message: string
+    native?: {
+      contract: string
+      platform: string
+      supported: boolean
+      reason: string | null
+      info: Record<string, unknown>
+    }
   }
 }
 

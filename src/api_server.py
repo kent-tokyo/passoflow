@@ -1236,6 +1236,15 @@ def list_actions() -> list[dict[str, Any]]:
 def environment_status() -> dict[str, object]:
     """Report local setup needed by browser and desktop actions without sending input."""
     desktop = {"supported": os.name == "nt", "capture": "unknown", "message": ""}
+    try:
+        # Keep the binding optional: source checkouts without the Rust wheel still use
+        # the compatibility probe below, while installed builds expose the richer native
+        # display, keyboard-layout, and permission diagnostics.
+        import passoflow_python
+
+        desktop["native"] = json.loads(passoflow_python.input_platform_info_json())
+    except (ImportError, AttributeError, TypeError, ValueError, RuntimeError) as exc:
+        logger.debug("Rust input diagnostics unavailable: %s", exc)
     if os.name != "nt":
         desktop["message"] = "Desktop input and screen capture are supported on Windows only."
     else:
