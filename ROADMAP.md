@@ -53,6 +53,7 @@ Gate: the contract and replacement scope are documented, and existing action fix
 - [x] Add initial Rust tests for existing-style scenarios, unknown actions/parameters, and deterministic diagnostics.
 - [x] Add shared Rust/Python compatibility fixtures for control-flow and basic schema failures.
 - [x] Add a Python-side compatibility test that runs when the current runner dependencies are installed.
+- [x] Expose the deterministic action schema from Rust and add a CLI compatibility test for the contract surface.
 - [x] Extend shared fixtures to image safety, coordinate, confidence, and timeout constraints.
 - [x] Align DOM timeout, Webhook payload, and conditional-value constraints in shared fixtures.
 - [x] Add a Rust CLI that validates scenarios and emits machine-readable diagnostics.

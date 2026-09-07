@@ -1,6 +1,8 @@
 use std::{collections::BTreeSet, env, fs, path::Path, process::ExitCode};
 
-use passoflow_core::{CONTRACT_VERSION, Diagnostic, Scenario, Severity};
+use passoflow_core::{
+    CONTRACT_VERSION, Diagnostic, Scenario, Severity, action_schema, step_meta_keys,
+};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -13,7 +15,7 @@ struct ValidationReport {
 }
 
 fn usage() {
-    eprintln!("Usage: passoflow-validate [--normalized|--plan] <scenario.yaml>");
+    eprintln!("Usage: passoflow-validate [--normalized|--plan] <scenario.yaml> | --schema");
 }
 
 fn collect_variable_references(value: &serde_yaml::Value, references: &mut BTreeSet<String>) {
@@ -209,6 +211,20 @@ fn main() -> ExitCode {
     let args: Vec<_> = env::args().skip(1).collect();
     let normalized = args.first().is_some_and(|arg| arg == "--normalized");
     let plan = args.first().is_some_and(|arg| arg == "--plan");
+    let schema = args.first().is_some_and(|arg| arg == "--schema");
+    if schema {
+        if args.len() != 1 {
+            usage();
+            return ExitCode::from(2);
+        }
+        let payload = serde_json::json!({
+            "contract": CONTRACT_VERSION,
+            "actions": action_schema(),
+            "step_meta_keys": step_meta_keys(),
+        });
+        println!("{payload}");
+        return ExitCode::SUCCESS;
+    }
     let path_arg = if normalized || plan {
         args.get(1)
     } else {

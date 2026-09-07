@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use passoflow_core::Scenario;
+use passoflow_core::{Scenario, action_schema, step_meta_keys};
 
 const VALID: &str = include_str!("../../../../tests/fixtures/validator_compat/valid_control.yaml");
 const UNKNOWN: &str =
@@ -15,6 +15,25 @@ const INVALID_WEB_VALUES: &str =
     include_str!("../../../../tests/fixtures/validator_compat/invalid_web_values.yaml");
 const EXPECTED: &str =
     include_str!("../../../../tests/fixtures/validator_compat/expected_diagnostics.json");
+
+#[test]
+fn cli_schema_matches_the_core_schema() {
+    let output = Command::new(env!("CARGO_BIN_EXE_passoflow-validate"))
+        .arg("--schema")
+        .output()
+        .expect("schema command should run");
+    assert!(output.status.success());
+    let actual: serde_json::Value = serde_json::from_slice(&output.stdout).expect("schema is JSON");
+    assert_eq!(actual["contract"], "0.1");
+    assert_eq!(
+        actual["actions"],
+        serde_json::to_value(action_schema()).expect("schema serializes")
+    );
+    assert_eq!(
+        actual["step_meta_keys"],
+        serde_json::to_value(step_meta_keys()).expect("metadata serializes")
+    );
+}
 
 #[test]
 fn shared_fixture_matches_expected_validity() {

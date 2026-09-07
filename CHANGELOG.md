@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added per-platform wheel smoke jobs for Linux, Windows, and macOS before PyPI publication.
 - Added the publishable `passoflow` umbrella crate as the stable Rust entry point.
 - Exposed the versioned action schema through the Rust core and Python binding for editor compatibility checks.
+- Added a Rust validator `--schema` output and a compatibility test that keeps the CLI schema aligned with the core.
 - Published `passoflow` 0.1.2 to crates.io through the guarded GitHub Actions workflow.
 - Fixed user-guide image links to match the local `/docs/assets` route and restored UI smoke coverage.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
