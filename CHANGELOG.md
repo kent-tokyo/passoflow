@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added an optional synchronous `tungstenite` WebSocket wire for local Chromium CDP endpoints.
 - Added Rust selector preview and conservative recovery suggestions for common DOM selectors.
 - Extended the opt-in Rust runner bridge to preload selected table rows for Rust table loops.
+- Extended the opt-in Rust runner bridge to flatten validated `call_scenario` and `repeat` steps.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

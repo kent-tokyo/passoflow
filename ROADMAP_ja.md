@@ -145,6 +145,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] template読み込みを注入でき、capture/search/clickポリシーを使うRust `click_image`初期`StepExecutor`を追加する。
 - [x] 同じregion、retry、confidence、target-window安全ポリシーで`move_mouse_to_image`を実行する。
 - [x] シナリオroot配下のPNG/JPEG/BMPを読み込み、path traversalを拒否する`FileTemplateLoader`を追加する。
+- [x] opt-in Rust bridgeがplanを構築する前に、検証済みの`call_scenario`と`repeat`を展開する。
 - [ ] Python側のオーケストレーションをRust engineへ移し、未対応のOS部分だけ明示的なアダプタとして残す。
 - [ ] 既存Reactエディタと互換性のある`passoflow-server`をローカル専用APIとして追加する。
 - [ ] 現在のパレット、キャンバス、パラメータパネル、ダイアログ、ログ、フォーカス操作、ライト/ダーク表示を操作面・見た目ともに互換維持する。

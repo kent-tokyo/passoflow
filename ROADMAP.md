@@ -145,6 +145,7 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 - [x] Add the initial Rust `click_image` `StepExecutor` with injected template loading and capture/search/click policy.
 - [x] Add `move_mouse_to_image` execution with the same region, retry, confidence, and target-window safety policy.
 - [x] Add a scenario-rooted PNG/JPEG/BMP `FileTemplateLoader` with path-traversal protection.
+- [x] Flatten validated `call_scenario` and `repeat` steps before the opt-in Rust bridge builds its plan.
 - [ ] Replace Python orchestration with the Rust engine while retaining only explicitly scoped platform adapters.
 - [ ] Add `passoflow-server` as a local-only API compatible with the current React editor.
 - [ ] Keep the current palette, canvas, parameter panel, dialogs, logs, focus behavior, and light/dark visual treatment behaviorally and visually compatible.

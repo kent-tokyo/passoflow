@@ -479,27 +479,26 @@ def _rust_stop_requested() -> bool:
 
 
 def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
-    """Run a root scenario through Rust, preloading table rows for table loops."""
-    if any(step.get("action") in {"call_scenario", "repeat"} for step in steps):
-        raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not yet support nested scenarios or repeat actions")
+    """Run a root scenario through Rust, inlining nested scenarios and table loops."""
     try:
         import passoflow_python
     except ImportError as error:
         raise RuntimeError(
             "PASSOFLOW_USE_RUST_ENGINE=1 requires the passoflow Python binding; install the wheel or build it with maturin"
         ) from error
+    expanded_steps = _expand_rust_nested_steps(steps)
     global RUST_ENGINE_TOTAL
-    RUST_ENGINE_TOTAL = len(steps)
+    RUST_ENGINE_TOTAL = len(expanded_steps)
     _LOADED_TABLES.clear()
     # Rust selects table-loop iterations before invoking the Python action callback. Preload
     # declared tables with the same loader and selected-row policy used by the compatibility
     # runner. The load_table callback still runs at its original step for logging and parity.
-    for step in steps:
+    for step in expanded_steps:
         if step.get("action") == "load_table":
             _run_load_table(step, {})
     try:
         report_json = passoflow_python.run_runtime_state(
-            Path(yaml_path).read_text(encoding="utf-8"),
+            yaml.safe_dump({"steps": expanded_steps}, sort_keys=False, allow_unicode=True),
             "{}",
             json.dumps(_LOADED_TABLES, ensure_ascii=False),
             _rust_runtime_callback,
@@ -670,6 +669,25 @@ def _load_steps(yaml_path: str | Path) -> list[dict]:
     with open(yaml_path, encoding="utf-8") as f:
         scenario = yaml.safe_load(f)
     return scenario["steps"]
+
+
+def _expand_rust_nested_steps(steps: list[dict], ancestors: set[Path] | None = None) -> list[dict]:
+    """Inline validated nested scenarios so Rust receives one executable plan."""
+    ancestors = set() if ancestors is None else set(ancestors)
+    expanded: list[dict] = []
+    for step in steps:
+        action = step.get("action")
+        if action not in {"call_scenario", "repeat"}:
+            expanded.append(step)
+            continue
+        nested_path = (SCENARIOS_DIR / step["path"]).resolve()
+        if nested_path in ancestors:
+            raise ValueError(f"circular nested scenario reference: {nested_path.name}")
+        nested_steps = _expand_rust_nested_steps(_load_steps(nested_path), ancestors | {nested_path})
+        repeat_count = int(step.get("count", 1)) if action == "repeat" else 1
+        for _ in range(repeat_count):
+            expanded.extend(nested_steps)
+    return expanded
 
 
 # Keys allowed on every step regardless of action, set by the web UI rather than by hand.
