@@ -106,6 +106,7 @@ Gate: existing scenarios validate and run without observable schema regression.
 - [x] Map Windows active-window coordinates and expose the virtual-desktop bounds, including negative monitor origins.
 - [x] Add a Windows foreground-window snapshot API with title and screen-space bounds for guarded visual actions.
 - [x] Add a Windows CI job that compiles and checks the native adapter on `windows-latest`.
+- [x] Enforce adapter-reported denied accessibility permission before dispatching any input event.
 - [ ] Implement platform adapters directly against supported OS APIs; do not wrap PyAutoGUI, Enigo, or another automation library.
 - [ ] Define coordinate spaces, display scaling, multi-monitor behavior, keyboard layouts, and permission diagnostics.
 - [x] Add a small standalone dry-run input test tool and portable safety tests.

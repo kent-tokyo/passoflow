@@ -106,6 +106,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Windowsのアクティブウィンドウ座標を変換し、負のモニタ原点を含む仮想デスクトップ範囲を扱う。
 - [x] 対象window操作向けに、タイトルと画面座標の矩形を返すWindows foreground-window snapshot APIを追加する。
 - [x] `windows-latest`上でネイティブadapterをコンパイル・検査するWindows CIジョブを追加する。
+- [x] adapterがアクセシビリティ権限をdeniedと報告した場合、入力イベントをdispatch前に拒否する。
 - [ ] 対応OSのネイティブAPIを直接使うアダプタを実装し、PyAutoGUI、Enigo、他の自動化ライブラリをラップしない。
 - [ ] 座標系、表示倍率、マルチモニタ、キーボード配列、権限エラーを定義する。
 - [x] 独立したdry-run入力テストツールと共通安全テストを追加する。

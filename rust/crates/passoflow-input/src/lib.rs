@@ -782,6 +782,10 @@ impl<B: InputBackend> InputController<B> {
     }
 
     fn validate(&self, event: &InputEvent) -> Result<(), InputError> {
+        let permission = self.backend.platform_info().accessibility_permission;
+        if permission == PermissionState::Denied {
+            return Err(InputError::PermissionDenied(permission));
+        }
         match event {
             InputEvent::MoveTo { point, space } | InputEvent::Click { point, space, .. } => {
                 let screen_point = self.backend.resolve_point(*point, *space)?;
@@ -849,7 +853,7 @@ impl InputBackend for RecordingInput {
 mod tests {
     use super::{
         CoordinateSpace, InputBackend, InputConfig, InputController, InputError, InputEvent,
-        MouseButton, Point, RecordingInput, Rect, ScaleFactor,
+        MouseButton, PermissionState, PlatformInfo, Point, RecordingInput, Rect, ScaleFactor,
     };
 
     fn controller() -> InputController<RecordingInput> {
@@ -886,6 +890,22 @@ mod tests {
                     y: point.y + 100,
                 },
             })
+        }
+    }
+
+    #[derive(Default)]
+    struct DeniedInput;
+
+    impl InputBackend for DeniedInput {
+        fn execute(&mut self, _event: &InputEvent) -> Result<(), InputError> {
+            panic!("permission-denied input must not reach the backend")
+        }
+
+        fn platform_info(&self) -> PlatformInfo {
+            PlatformInfo {
+                accessibility_permission: PermissionState::Denied,
+                ..PlatformInfo::default()
+            }
         }
     }
 
@@ -948,6 +968,15 @@ mod tests {
         assert_eq!(
             controller.move_to(Point { x: 0, y: 0 }, CoordinateSpace::ActiveWindow),
             Err(InputError::FailSafeTriggered { x: 100, y: 100 })
+        );
+    }
+
+    #[test]
+    fn blocks_events_when_the_adapter_reports_denied_permission() {
+        let mut controller = InputController::new(DeniedInput, InputConfig::default());
+        assert_eq!(
+            controller.press_key("enter"),
+            Err(InputError::PermissionDenied(PermissionState::Denied))
         );
     }
 

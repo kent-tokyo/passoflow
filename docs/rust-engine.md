@@ -86,6 +86,8 @@ The same concepts are exposed by `passoflow-core` as
 - Input safety checks use the adapter-resolved screen coordinate, so an
   active-window-relative point cannot bypass the configured bounds or fail-safe
   point.
+- A native adapter reporting denied accessibility permission is rejected before
+  any input event reaches the OS.
 - Image actions use exact-size sRGB matching with no implicit scaling or color
   conversion; alpha is ignored. Search supports candidate priority, confidence, retry, regions, anchors/offsets,
   active-window regions, target-window guards, and ambiguity-safe clicks.
