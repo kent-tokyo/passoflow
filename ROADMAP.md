@@ -88,6 +88,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Replace the API's immediate subprocess kill with a graceful stop lifecycle and delayed fallback kill.
 - [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.
 - [x] Add a filesystem-independent Rust nested-scenario expansion API with missing/circular-target safety checks.
+- [x] Delegate nested `call_scenario` and `repeat` expansion from the opt-in Python bridge to Rust.
 - [x] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 

@@ -88,6 +88,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
 - [x] filesystemに依存しないRust nested scenario展開APIと、未登録・循環targetの安全検査を追加する。
+- [x] オプトインPython bridgeのnested `call_scenario` / `repeat`展開をRustへ委譲する。
 - [x] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 

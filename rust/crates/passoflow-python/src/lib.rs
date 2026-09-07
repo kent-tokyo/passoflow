@@ -112,6 +112,26 @@ fn normalize_yaml(yaml: &str) -> PyResult<String> {
         .map_err(|error| PyRuntimeError::new_err(error.to_string()))
 }
 
+/// Expand nested scenario steps using YAML documents supplied by the caller.
+#[pyfunction]
+fn expand_nested_steps(yaml: &str, scenarios_json: &str) -> PyResult<String> {
+    let scenario = Scenario::from_yaml(yaml)
+        .map_err(|error| PyValueError::new_err(format!("invalid scenario YAML: {error}")))?;
+    let sources: BTreeMap<String, String> = from_str(scenarios_json)
+        .map_err(|error| PyValueError::new_err(format!("invalid scenarios JSON: {error}")))?;
+    let mut scenarios = BTreeMap::new();
+    for (path, source) in sources {
+        let nested = Scenario::from_yaml(&source).map_err(|error| {
+            PyValueError::new_err(format!("invalid nested scenario {path:?}: {error}"))
+        })?;
+        scenarios.insert(path, nested);
+    }
+    let steps = scenario
+        .expand_nested_steps(&scenarios)
+        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+    to_string(&steps).map_err(|error| PyRuntimeError::new_err(error.to_string()))
+}
+
 /// Return the stable scenario/event contract version.
 #[pyfunction]
 fn contract_version() -> &'static str {
@@ -231,6 +251,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<DomBrowser>()?;
     module.add_function(wrap_pyfunction!(validate_yaml, module)?)?;
     module.add_function(wrap_pyfunction!(normalize_yaml, module)?)?;
+    module.add_function(wrap_pyfunction!(expand_nested_steps, module)?)?;
     module.add_function(wrap_pyfunction!(contract_version, module)?)?;
     module.add_function(wrap_pyfunction!(action_schema_json, module)?)?;
     module.add_function(wrap_pyfunction!(run_runtime_state, module)?)?;
@@ -240,7 +261,7 @@ fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_yaml;
+    use super::{expand_nested_steps, validate_yaml};
     use serde_json::Value;
 
     #[test]
@@ -250,5 +271,18 @@ mod tests {
         assert_eq!(result["contract"], "0.1");
         assert_eq!(result["valid"], true);
         assert!(result["execution_plan"]["steps"].is_array());
+    }
+
+    #[test]
+    fn expands_nested_steps_for_the_python_bridge() {
+        let expanded = expand_nested_steps(
+            "steps:\n  - action: call_scenario\n    path: child.yaml\n",
+            r#"{"child.yaml":"steps:\n  - action: wait\n    ms: 1\n"}"#,
+        )
+        .expect("nested steps should expand");
+        let steps: Vec<serde_json::Value> =
+            serde_json::from_str(&expanded).expect("steps are JSON");
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0]["action"], "wait");
     }
 }
