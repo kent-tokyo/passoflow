@@ -98,6 +98,7 @@ Gate: existing scenarios validate and run without observable schema regression.
 
 - [x] Implement a Rust input abstraction for pointer movement, click/double-click, scrolling, key press, hotkeys, and text entry.
 - [x] Add portable coordinate bounds, fail-safe point checks, click-indicator timing, and an in-memory recording backend.
+- [x] Apply screen bounds and fail-safe checks after active-window coordinates are resolved.
 - [x] Define typed display scaling, multi-monitor display metadata, keyboard layout metadata, and accessibility permission states.
 - [x] Add an initial Windows `user32` adapter for screen-coordinate pointer, click, scroll, key, hotkey, and Unicode text events.
 - [x] Send Unicode text through Win32 `SendInput` UTF-16 events instead of an 8-bit keybd-event path.

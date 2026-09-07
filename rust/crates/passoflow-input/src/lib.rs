@@ -216,6 +216,17 @@ pub trait InputBackend {
     /// or cannot complete the event.
     fn execute(&mut self, event: &InputEvent) -> Result<(), InputError>;
 
+    /// Resolve an event point into screen coordinates before safety checks.
+    ///
+    /// Adapters with active-window support should override this method. The
+    /// identity default keeps recording and other screen-only adapters useful.
+    /// # Errors
+    ///
+    /// Returns an adapter error when the active window cannot be resolved.
+    fn resolve_point(&self, point: Point, _space: CoordinateSpace) -> Result<Point, InputError> {
+        Ok(point)
+    }
+
     /// Report displays, keyboard layout, and permission state before execution.
     fn platform_info(&self) -> PlatformInfo {
         PlatformInfo::default()
@@ -428,6 +439,10 @@ impl InputBackend for WindowsInput {
 
     fn platform_info(&self) -> PlatformInfo {
         self.info.clone()
+    }
+
+    fn resolve_point(&self, point: Point, space: CoordinateSpace) -> Result<Point, InputError> {
+        screen_point(point, space)
     }
 }
 
@@ -769,20 +784,19 @@ impl<B: InputBackend> InputController<B> {
     fn validate(&self, event: &InputEvent) -> Result<(), InputError> {
         match event {
             InputEvent::MoveTo { point, space } | InputEvent::Click { point, space, .. } => {
-                if *space == CoordinateSpace::Screen {
-                    if let Some(bounds) = self.config.screen_bounds {
-                        if !bounds.contains(*point) {
-                            return Err(InputError::OutsideScreen {
-                                x: point.x,
-                                y: point.y,
-                            });
-                        }
+                let screen_point = self.backend.resolve_point(*point, *space)?;
+                if let Some(bounds) = self.config.screen_bounds {
+                    if !bounds.contains(screen_point) {
+                        return Err(InputError::OutsideScreen {
+                            x: screen_point.x,
+                            y: screen_point.y,
+                        });
                     }
                 }
-                if self.config.fail_safe && *point == self.config.fail_safe_point {
+                if self.config.fail_safe && screen_point == self.config.fail_safe_point {
                     return Err(InputError::FailSafeTriggered {
-                        x: point.x,
-                        y: point.y,
+                        x: screen_point.x,
+                        y: screen_point.y,
                     });
                 }
                 if let InputEvent::Click { count, .. } = event {
@@ -834,8 +848,8 @@ impl InputBackend for RecordingInput {
 #[cfg(test)]
 mod tests {
     use super::{
-        CoordinateSpace, InputConfig, InputController, InputError, MouseButton, Point,
-        RecordingInput, Rect, ScaleFactor,
+        CoordinateSpace, InputBackend, InputConfig, InputController, InputError, InputEvent,
+        MouseButton, Point, RecordingInput, Rect, ScaleFactor,
     };
 
     fn controller() -> InputController<RecordingInput> {
@@ -851,6 +865,28 @@ mod tests {
                 ..InputConfig::default()
             },
         )
+    }
+
+    #[derive(Default)]
+    struct OffsetInput {
+        events: Vec<InputEvent>,
+    }
+
+    impl InputBackend for OffsetInput {
+        fn execute(&mut self, event: &InputEvent) -> Result<(), InputError> {
+            self.events.push(event.clone());
+            Ok(())
+        }
+
+        fn resolve_point(&self, point: Point, space: CoordinateSpace) -> Result<Point, InputError> {
+            Ok(match space {
+                CoordinateSpace::Screen => point,
+                CoordinateSpace::ActiveWindow => Point {
+                    x: point.x + 100,
+                    y: point.y + 100,
+                },
+            })
+        }
     }
 
     #[test]
@@ -892,6 +928,27 @@ mod tests {
             Err(InputError::FailSafeTriggered { x: 0, y: 0 })
         );
         assert_eq!(controller.press_key(" "), Err(InputError::EmptyKey));
+    }
+
+    #[test]
+    fn applies_fail_safe_after_active_window_resolution() {
+        let mut controller = InputController::new(
+            OffsetInput::default(),
+            InputConfig {
+                screen_bounds: Some(Rect {
+                    left: 0,
+                    top: 0,
+                    width: 800,
+                    height: 600,
+                }),
+                fail_safe_point: Point { x: 100, y: 100 },
+                ..InputConfig::default()
+            },
+        );
+        assert_eq!(
+            controller.move_to(Point { x: 0, y: 0 }, CoordinateSpace::ActiveWindow),
+            Err(InputError::FailSafeTriggered { x: 100, y: 100 })
+        );
     }
 
     #[test]

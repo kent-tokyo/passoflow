@@ -83,6 +83,9 @@ The same concepts are exposed by `passoflow-core` as
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.
+- Input safety checks use the adapter-resolved screen coordinate, so an
+  active-window-relative point cannot bypass the configured bounds or fail-safe
+  point.
 - Image actions use exact-size sRGB matching with no implicit scaling or color
   conversion; alpha is ignored. Search supports candidate priority, confidence, retry, regions, anchors/offsets,
   active-window regions, target-window guards, and ambiguity-safe clicks.
