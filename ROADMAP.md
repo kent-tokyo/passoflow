@@ -94,6 +94,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Reject stale Rust plans when loaded step parameters changed between planning and dispatch.
 - [x] Fail closed with explicit alignment errors when a Rust plan step is malformed.
 - [x] Preserve guarded `--start`/`--end` reruns on the opt-in Rust execution path.
+- [x] Preserve global progress and event step numbers during Rust partial reruns.
 - [x] Require the published wheel smoke tests to verify the exported warning contract API.
 - [x] Isolate launch readiness checks and test early exit/window timeout without starting an OS process.
 - [x] Propagate cooperative stop markers into the Rust-backed runner at step boundaries.

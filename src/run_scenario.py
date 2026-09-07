@@ -79,6 +79,7 @@ logger = logging.getLogger(__name__)
 
 RUN_ID: str | None = None
 RUST_ENGINE_TOTAL: int | None = None
+RUST_ENGINE_STEP_OFFSET = 0
 
 class _StepWarningHandler(logging.Handler):
     """Record whether one action emitted a warning without changing log output."""
@@ -431,8 +432,9 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
         raise ValueError(f"Rust runtime callback received unsupported action: {action!r}")
     step_number = int(step.get("index", 0))
     if RUST_ENGINE_TOTAL:
-        print(f"@@PROGRESS@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
-        overlay.set_step_label(f"Step {step_number}/{RUST_ENGINE_TOTAL}: {step.get('title') or step.get('note') or action}")
+        display_step = step_number + RUST_ENGINE_STEP_OFFSET
+        print(f"@@PROGRESS@@{display_step}/{RUST_ENGINE_TOTAL}", flush=True)
+        overlay.set_step_label(f"Step {display_step}/{RUST_ENGINE_TOTAL}: {step.get('title') or step.get('note') or action}")
     warning_handler = _StepWarningHandler()
     logging.getLogger().addHandler(warning_handler)
     before_screenshot = _capture_step_screenshot() if RUN_ID else None
@@ -470,7 +472,7 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
             }
         )
     if RUST_ENGINE_TOTAL:
-        print(f"@@COMPLETED@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
+        print(f"@@COMPLETED@@{step_number + RUST_ENGINE_STEP_OFFSET}/{RUST_ENGINE_TOTAL}", flush=True)
     return json.dumps(
         {
             "result": {"outcome": outcome, "message": action, "artifacts": []},
@@ -485,7 +487,13 @@ def _rust_stop_requested() -> bool:
     return bool(stop_file and Path(stop_file).is_file())
 
 
-def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
+def _run_with_rust_engine(
+    yaml_path: str | Path,
+    steps: list[dict],
+    run_id: str | None,
+    step_offset: int = 0,
+    display_total: int | None = None,
+) -> None:
     """Run the selected scenario steps through Rust, including nested expansion."""
     try:
         import passoflow_python
@@ -500,8 +508,9 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
             json.dumps(sources, ensure_ascii=False),
         )
     )
-    global RUST_ENGINE_TOTAL
-    RUST_ENGINE_TOTAL = len(expanded_steps)
+    global RUST_ENGINE_STEP_OFFSET, RUST_ENGINE_TOTAL
+    RUST_ENGINE_STEP_OFFSET = step_offset
+    RUST_ENGINE_TOTAL = display_total or len(expanded_steps)
     _LOADED_TABLES.clear()
     # Rust selects table-loop iterations before invoking the Python action callback. Preload
     # declared tables with the same loader and selected-row policy used by the compatibility
@@ -522,7 +531,11 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
         )
     finally:
         RUST_ENGINE_TOTAL = None
+        RUST_ENGINE_STEP_OFFSET = 0
     report = json.loads(report_json)
+    for event in report.get("events", []):
+        if isinstance(event, dict) and isinstance(event.get("step"), int):
+            event["step"] += step_offset
     for event in report.get("events", []):
         logger.info("Rust engine step %s: %s", event.get("step"), event.get("message"))
         for artifact in event.get("artifacts", []):
@@ -1202,7 +1215,7 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
     variables: dict[str, str] = {}
     try:
         if os.environ.get("PASSOFLOW_USE_RUST_ENGINE") == "1":
-            _run_with_rust_engine(yaml_path, steps, run_id)
+            _run_with_rust_engine(yaml_path, steps, run_id, start_idx, len(all_steps))
         else:
             _run_steps(steps, variables, offset=start_idx, total=len(all_steps))
     finally:
