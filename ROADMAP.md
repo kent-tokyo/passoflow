@@ -100,6 +100,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Preflight expanded Rust actions before any table loading or action dispatch.
 - [x] Apply one symlink-aware scenario-root path policy to Python validation and Rust expansion.
 - [x] Apply the scenario-root policy to image templates and compatibility nested execution.
+- [x] Document the scenario-root file policy in the English and Japanese action references.
 - [x] Keep run-level `stopped` status distinct from per-action event outcomes.
 - [x] Reject boolean values masquerading as event step numbers at the runtime report boundary.
 - [x] Require the published wheel smoke tests to verify the exported warning contract API.

@@ -130,6 +130,10 @@ In the editor, `Preview matches` opens a separate headless local Playwright page
 | `wait` | Sleeps for `ms` milliseconds, in addition to the automatic `STEP_DELAY` (50ms) applied after every step. |
 | `start` / `end` | No-ops. They only exist as visual start/end markers for the web-based flow editor and have no runtime effect. |
 
+Scenario files and image templates referenced by `path` or `images` must stay
+under the scenario root. Absolute paths, `..` traversal, and symlink escapes
+are rejected before execution.
+
 ## On-screen run overlays
 
 When a run fails or is stopped, PassoFlow records a final screenshot and, when screen capture is available, before/after screenshots for the failed step under `logs/`. The paths are included in the execution log; these files may contain sensitive screen content.
