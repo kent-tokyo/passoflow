@@ -118,7 +118,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] Windows foreground/native window取得と、window単位のDPI取得primitiveを追加する。
 - [x] GDI画面取得可否を変更なしで検査し、granted/denied/unknownを明示する診断を追加する。
 - [x] Windowsのモニタごとの列挙と、best-effort effective DPI情報を追加する。
-- [ ] 対応OS全体の実行時権限案内を追加する。
+- [x] 対応OS全体の実行時権限案内を追加する。
 - [x] `NotFound`だけを再試行する処理をRustのcapture/vision境界へ移植する。
 - [x] OS非依存のアクティブウィンドウregion解決と、対象タイトル不一致時のfail-closedガードを追加する。
 - [x] 画像一致のアンカー/offset結果をPassoFlow input controllerへ接続し、guard付き単/double clickを実装する。

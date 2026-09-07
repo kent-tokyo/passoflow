@@ -1234,8 +1234,21 @@ def list_actions() -> list[dict[str, Any]]:
 
 @app.get("/api/environment")
 def environment_status() -> dict[str, object]:
-    """Report optional local setup needed by DOM browser actions without launching a browser."""
-    return {"dom_browser": dom_browser_setup_status()}
+    """Report local setup needed by browser and desktop actions without sending input."""
+    desktop = {"supported": os.name == "nt", "capture": "unknown", "message": ""}
+    if os.name != "nt":
+        desktop["message"] = "Desktop input and screen capture are supported on Windows only."
+    else:
+        try:
+            # A one-pixel read is a non-invasive capture probe; it does not move the
+            # pointer or synthesize input. A real action still performs its own checks.
+            pyautogui.screenshot(region=(0, 0, 1, 1))
+            desktop["capture"] = "ready"
+            desktop["message"] = "Screen capture is available. Input permission is checked when an action runs."
+        except Exception as exc:
+            desktop["capture"] = "blocked"
+            desktop["message"] = f"Screen capture is unavailable: {exc}"
+    return {"dom_browser": dom_browser_setup_status(), "desktop": desktop}
 
 
 @app.post("/api/dom/preview")

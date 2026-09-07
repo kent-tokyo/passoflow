@@ -28,6 +28,11 @@ export interface EnvironmentStatus {
     chromium: boolean
     message: string
   }
+  desktop: {
+    supported: boolean
+    capture: "ready" | "blocked" | "unknown"
+    message: string
+  }
 }
 
 export async function fetchEnvironmentStatus(): Promise<EnvironmentStatus> {

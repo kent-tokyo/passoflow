@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { fetchEnvironmentStatus } from "../api/scenarioApi"
+import { fetchEnvironmentStatus, type EnvironmentStatus } from "../api/scenarioApi"
 import { useLocale } from "../i18n/useLocale"
 import { readStorage, writeStorage } from "../lib/storage"
 import { recordDomSetupCompleted, recordFirstUseStarted } from "../lib/usageMetrics"
@@ -15,14 +15,16 @@ export default function FirstUseGuide() {
   const [visible, setVisible] = useState(() => !wasDismissed())
   const [domReady, setDomReady] = useState<boolean | null>(null)
   const [playwrightReady, setPlaywrightReady] = useState<boolean | null>(null)
+  const [desktopStatus, setDesktopStatus] = useState<EnvironmentStatus["desktop"] | null>(null)
 
   useEffect(() => {
     recordFirstUseStarted()
     let active = true
-    fetchEnvironmentStatus().then(({ dom_browser }) => {
+    fetchEnvironmentStatus().then(({ dom_browser, desktop }) => {
       if (!active) return
       setDomReady(dom_browser.chromium)
       setPlaywrightReady(dom_browser.playwright)
+      setDesktopStatus(desktop)
       if (dom_browser.chromium) recordDomSetupCompleted()
     }).catch(() => {
       if (active) setDomReady(null)
@@ -52,6 +54,9 @@ export default function FirstUseGuide() {
       {domReady === true && <span className="first-use-guide-setup-status ready">{t("firstUseGuideDomReady")}</span>}
       {domReady === false && !playwrightReady && <span className="first-use-guide-setup-status warning">{t("firstUseGuidePlaywrightMissing")}</span>}
       {domReady === false && playwrightReady === true && <span className="first-use-guide-setup-status warning">{t("firstUseGuideChromiumMissing")}</span>}
+      {desktopStatus && <span className={`first-use-guide-setup-status ${desktopStatus.capture === "ready" ? "ready" : "warning"}`}>
+        {desktopStatus.capture === "ready" ? t("firstUseGuideDesktopReady") : t("firstUseGuideDesktopNeedsAttention")}
+      </span>}
       <button type="button" className="first-use-guide-close" onClick={dismiss}>
         {t("firstUseGuideDismiss")}
       </button>

@@ -64,6 +64,7 @@ Choose one mode per browser flow:
 
 Install Chromium once with `python -m playwright install chromium` before using DOM mode.
 When the editor opens, the first-use guide checks for the Playwright package and Chromium and shows the missing setup command if needed.
+It also performs a non-invasive screen-capture check. On Windows, a ready result means screen capture is available; input permission is still checked when the first desktop action runs. On other platforms, the guide identifies desktop actions as unsupported.
 
 ## Platform requirements
 

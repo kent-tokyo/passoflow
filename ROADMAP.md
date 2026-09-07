@@ -118,7 +118,7 @@ Gate: basic input actions work on the stated platform matrix with explicit permi
 - [x] Add Windows foreground/native window capture and per-window DPI lookup primitives.
 - [x] Add a non-invasive Windows GDI capture availability diagnostic with explicit granted/denied/unknown states.
 - [x] Add Windows per-monitor enumeration with best-effort effective DPI metadata.
-- [ ] Add runtime permission guidance on every supported platform.
+- [x] Add runtime permission guidance on every supported platform.
 - [x] Port retry-on-`NotFound` behavior into the Rust capture/vision boundary.
 - [x] Add platform-independent active-window region resolution and fail-closed target-title guards.
 - [x] Connect image-match anchor/offset results to the PassoFlow input controller with guarded single/double-click dispatch.
