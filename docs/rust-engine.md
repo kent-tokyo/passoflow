@@ -124,8 +124,9 @@ The same concepts are exposed by `passoflow-core` as
   those fields.
 - The existing Python runner can opt into this bridge with
   `PASSOFLOW_USE_RUST_ENGINE=1`. The current migration slice supports root
-  actions and fixed loops; nested scenarios and runtime table loading are
-  rejected explicitly. The default runner is unchanged.
+  actions, fixed loops, and table-backed loops. Table rows are preloaded with
+  the compatibility loader before Rust selects iterations; nested scenarios and
+  `repeat` remain explicitly rejected. The default runner is unchanged.
 - The bridge emits the existing `@@PROGRESS@@` and `@@COMPLETED@@` markers and
   returns step screenshot paths as failure artifacts when a run id is present.
 - The Python runner logs those returned artifact paths, so the existing Web UI

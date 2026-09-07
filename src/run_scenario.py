@@ -479,11 +479,9 @@ def _rust_stop_requested() -> bool:
 
 
 def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
-    """Run a compatible root scenario through the opt-in Rust engine binding."""
-    if any(step.get("action") in {"call_scenario", "repeat", "load_table"} for step in steps):
-        raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not yet support nested scenarios or runtime table loading")
-    if any(step.get("loop_table") for step in steps):
-        raise ValueError("PASSOFLOW_USE_RUST_ENGINE requires table rows to be supplied before execution")
+    """Run a root scenario through Rust, preloading table rows for table loops."""
+    if any(step.get("action") in {"call_scenario", "repeat"} for step in steps):
+        raise ValueError("PASSOFLOW_USE_RUST_ENGINE does not yet support nested scenarios or repeat actions")
     try:
         import passoflow_python
     except ImportError as error:
@@ -492,11 +490,18 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
         ) from error
     global RUST_ENGINE_TOTAL
     RUST_ENGINE_TOTAL = len(steps)
+    _LOADED_TABLES.clear()
+    # Rust selects table-loop iterations before invoking the Python action callback. Preload
+    # declared tables with the same loader and selected-row policy used by the compatibility
+    # runner. The load_table callback still runs at its original step for logging and parity.
+    for step in steps:
+        if step.get("action") == "load_table":
+            _run_load_table(step, {})
     try:
         report_json = passoflow_python.run_runtime_state(
             Path(yaml_path).read_text(encoding="utf-8"),
             "{}",
-            "{}",
+            json.dumps(_LOADED_TABLES, ensure_ascii=False),
             _rust_runtime_callback,
             _rust_stop_requested,
             run_id or "run",
