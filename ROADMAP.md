@@ -163,6 +163,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
 - [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
 - [x] Build the 0.1.2 wheel locally and verify its exported API in a clean virtual environment.
+- [x] Run a live Chromium CDP smoke test from the clean wheel for navigation, waiting, selector preview, and click.
 - [x] Register the `passoflow` GitHub Actions Trusted Publisher configuration for the `release.yml` / `pypi` environment.
 - [x] Document desktop permissions, Chromium requirements, supported platforms, and unsupported adapters.
 

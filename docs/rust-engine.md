@@ -140,6 +140,10 @@ The same concepts are exposed by `passoflow-core` as
   `PASSOFLOW_USE_RUST_DOM=1` and `PASSOFLOW_RUST_CDP_ENDPOINT=ws://...`. The
   default Playwright path remains unchanged, and switching modes does not alter
   the scenario action names.
+- A macOS arm64 0.1.2 wheel was installed into a clean venv and used against a
+  live Chromium page for navigate, visible wait, selector preview, and click.
+  The smoke page had no input element, so fill remains covered by unit tests
+  and awaits an editable-page E2E fixture.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
