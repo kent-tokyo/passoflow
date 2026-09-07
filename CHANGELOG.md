@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added typed DOM action conversion from normalized Rust execution-plan steps.
 - Added a testable Rust CDP adapter prototype for navigation and DOM operations.
 - Added correlated JSON CDP transport handling behind an injectable text-wire boundary.
+- Added an optional synchronous `tungstenite` WebSocket wire for local Chromium CDP endpoints.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

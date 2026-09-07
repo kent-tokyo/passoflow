@@ -157,6 +157,76 @@ pub trait CdpWire {
     fn receive_text(&mut self) -> Result<String, BrowserError>;
 }
 
+#[cfg(feature = "websocket")]
+/// Synchronous local Chromium CDP wire backed by a WebSocket.
+pub struct WebSocketCdpWire {
+    socket: tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>,
+}
+
+#[cfg(feature = "websocket")]
+impl WebSocketCdpWire {
+    /// Connect to a local Chromium `DevTools` WebSocket endpoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the endpoint cannot be parsed or connected.
+    pub fn connect(endpoint: &str) -> Result<Self, BrowserError> {
+        let url = endpoint
+            .parse::<tungstenite::http::Uri>()
+            .map_err(|error| {
+                BrowserError::BackendUnavailable(format!("invalid CDP WebSocket endpoint: {error}"))
+            })?;
+        if url.scheme_str() != Some("ws") {
+            return Err(BrowserError::BackendUnavailable(
+                "local CDP WebSocket endpoint must use ws://".to_owned(),
+            ));
+        }
+        let (socket, _) = tungstenite::connect(url).map_err(|error| {
+            BrowserError::BackendUnavailable(format!("connect to CDP WebSocket: {error}"))
+        })?;
+        Ok(Self { socket })
+    }
+}
+
+#[cfg(feature = "websocket")]
+impl CdpWire for WebSocketCdpWire {
+    fn send_text(&mut self, payload: &str) -> Result<(), BrowserError> {
+        self.socket
+            .send(tungstenite::Message::Text(payload.to_owned().into()))
+            .map_err(|error| BrowserError::BackendUnavailable(format!("send CDP frame: {error}")))
+    }
+
+    fn receive_text(&mut self) -> Result<String, BrowserError> {
+        loop {
+            let message = self.socket.read().map_err(|error| {
+                BrowserError::BackendUnavailable(format!("receive CDP frame: {error}"))
+            })?;
+            match message {
+                tungstenite::Message::Text(text) => return Ok(text.to_string()),
+                tungstenite::Message::Binary(bytes) => {
+                    return String::from_utf8(bytes.to_vec()).map_err(|error| {
+                        BrowserError::BackendUnavailable(format!(
+                            "decode CDP binary frame: {error}"
+                        ))
+                    });
+                }
+                tungstenite::Message::Ping(payload) => self
+                    .socket
+                    .send(tungstenite::Message::Pong(payload))
+                    .map_err(|error| {
+                        BrowserError::BackendUnavailable(format!("reply to CDP ping: {error}"))
+                    })?,
+                tungstenite::Message::Pong(_) | tungstenite::Message::Frame(_) => {}
+                tungstenite::Message::Close(frame) => {
+                    return Err(BrowserError::BackendUnavailable(format!(
+                        "CDP WebSocket closed: {frame:?}"
+                    )));
+                }
+            }
+        }
+    }
+}
+
 /// JSON CDP transport with request/response correlation.
 ///
 /// The wire is injected so the protocol can be tested without a browser. A

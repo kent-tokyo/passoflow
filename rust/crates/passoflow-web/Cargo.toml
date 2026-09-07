@@ -7,6 +7,10 @@ description = "PassoFlow-owned DOM browser operation contracts"
 repository.workspace = true
 publish = false
 
+[features]
+default = []
+websocket = ["dep:tungstenite"]
+
 [lints]
 workspace = true
 
@@ -16,3 +20,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 thiserror = "2"
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"], optional = true }

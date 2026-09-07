@@ -96,9 +96,9 @@ The same concepts are exposed by `passoflow-core` as
   click, fill, and selector-state waits. A production WebSocket transport is
   intentionally a separate follow-up so the command contract remains testable.
 - `JsonCdpTransport` now owns CDP command IDs, ignores protocol events, and
-  fails closed on malformed, failed, or mismatched responses. A concrete
-  WebSocket client only needs to implement the small `CdpWire` text-frame
-  boundary.
+  fails closed on malformed, failed, or mismatched responses. The optional
+  `websocket` feature provides `WebSocketCdpWire` for local `ws://` Chromium
+  endpoints; it is kept optional so the default core remains dependency-light.
 - `ExecutionPlan::resolve_variables` provides non-mutating, recursive
   `{{variable}}` expansion for native executors. Unset variables resolve to an
   empty string for compatibility with the Python runner.
@@ -166,9 +166,9 @@ input to the operating system.
 
 ## Open gates
 
-The remaining migration work is selecting and prototyping the Rust DOM/Chromium
-adapter on top of `passoflow-web`, moving variable and control-flow execution
-behind the Rust engine, a local Rust-compatible API, platform wheels, runtime
-permission guidance, and PyPI installation verification. `passoflow-core` and
-the `passoflow-python` crate are published; the Python wheel remains open. See
-the [roadmap](../ROADMAP.md) for the phase order and completion criteria.
+The remaining migration work is validating the WebSocket adapter against a live
+Chromium endpoint, moving variable and control-flow execution behind the Rust
+engine, a local Rust-compatible API, platform wheels, runtime permission
+guidance, and PyPI installation verification. `passoflow-core` and the
+`passoflow-python` crate are published; the Python wheel remains open. See the
+[roadmap](../ROADMAP.md) for the phase order and completion criteria.
