@@ -20,6 +20,7 @@ import pythoncom
 import win32com.client
 
 from overlay import overlay
+from process_startup import wait_for_window as wait_for_process_window
 from screen_actions import RETRIES, RETRY_INTERVAL_MS
 
 logger = logging.getLogger(__name__)
@@ -112,18 +113,23 @@ def launch_app(path: str, args: list[str] | None = None, wait_for_window: str | 
     if not wait_for_window:
         return
 
-    deadline = time.monotonic() + max(startup_timeout_ms, 0) / 1000
-    while time.monotonic() <= deadline:
-        if process.poll() is not None:
-            raise RuntimeError(f"Application {path!r} exited during startup with code {process.returncode}")
-        if gw.getWindowsWithTitle(wait_for_window):
-            logger.info("Application ready: window contains %r", wait_for_window)
-            return
-        time.sleep(0.1)
-    raise TimeoutError(
-        f"Application {path!r} did not open a window containing {wait_for_window!r} "
-        f"within {startup_timeout_ms} ms"
-    )
+    try:
+        wait_for_process_window(
+            process,
+            wait_for_window,
+            startup_timeout_ms,
+            gw.getWindowsWithTitle,
+            time.sleep,
+            time.monotonic,
+        )
+    except RuntimeError as error:
+        raise RuntimeError(f"Application {path!r} {error}") from error
+    except TimeoutError as error:
+        raise TimeoutError(
+            f"Application {path!r} did not open a window containing {wait_for_window!r} "
+            f"within {startup_timeout_ms} ms"
+        ) from error
+    logger.info("Application ready: window contains %r", wait_for_window)
 
 
 def rename_file(path: str, new_name: str) -> None:

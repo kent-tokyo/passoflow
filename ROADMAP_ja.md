@@ -94,6 +94,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] plan作成後にloaded stepのparameterが変化した場合、古いRust planをdispatchせず拒否する。
 - [x] Rust planのstep自体が壊れている場合も、明示的なalignment errorでfail-closedにする。
 - [x] 公開wheelのsmoke testでwarning contract APIのexportを必須検証する。
+- [x] 起動準備チェックを分離し、OS processを起動せずに早期終了とwindow timeoutをテストする。
 - [x] stop markerをRust-backed runnerへstep境界で伝播し、協調停止できるようにする。
 - [x] APIの即時subprocess killをgraceful stop lifecycleへ置き換え、遅延fallback killを残す。
 - [x] Pythonのaction dispatchを維持したまま、正規化済みaction parameterをオプトインRust plan interfaceの背後へ移す。
