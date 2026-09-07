@@ -81,7 +81,8 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Preserve per-step `retry` and `retry_interval_ms` semantics in the runtime engine path.
 - [x] Add an opt-in Python runner path that dispatches compatible root actions through the Rust engine callback bridge.
 - [x] Preserve live progress markers and step before/after screenshot artifacts in the Rust-backed runner path.
-- [ ] Preserve cooperative stop requests and complete the failure-artifact handoff in the Rust-backed runner path.
+- [x] Complete the failure-artifact handoff from Rust events to the existing Python/Web UI log stream.
+- [ ] Preserve cooperative stop requests in the Rust-backed runner path.
 - [x] Move normalized action parameters behind the opt-in Rust plan interface while retaining Python action dispatch.
 - [ ] Move variable and control-flow planning behind the Rust engine interface.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.

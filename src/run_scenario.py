@@ -501,6 +501,9 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
     report = json.loads(report_json)
     for event in report.get("events", []):
         logger.info("Rust engine step %s: %s", event.get("step"), event.get("message"))
+        for artifact in event.get("artifacts", []):
+            if isinstance(artifact, dict) and artifact.get("path"):
+                logger.error("Failure artifact (%s): %s", artifact.get("kind", "artifact"), artifact["path"])
     status = report.get("status")
     if status == "failure_stop":
         raise RuntimeError("Rust engine stopped after an action failure")

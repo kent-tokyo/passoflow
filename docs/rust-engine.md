@@ -112,7 +112,9 @@ The same concepts are exposed by `passoflow-core` as
   rejected explicitly. The default runner is unchanged.
 - The bridge emits the existing `@@PROGRESS@@` and `@@COMPLETED@@` markers and
   returns step screenshot paths as failure artifacts when a run id is present.
-  Cooperative stop propagation and the complete artifact handoff remain open.
+- The Python runner logs those returned artifact paths, so the existing Web UI
+  stream receives them alongside the Rust event message. Cooperative stop
+  propagation remains open because the API currently stops subprocesses by kill.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.
