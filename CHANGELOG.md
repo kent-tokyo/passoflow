@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added first-use desktop setup diagnostics for Windows screen capture and unsupported desktop platforms.
 - Confirmed the opt-in stateful Rust engine as the owner of variable and control-flow planning.
 - Added filesystem-independent Rust expansion for nested scenarios with fail-closed target checks.
+- Delegated nested scenario expansion from the opt-in Python bridge to the Rust binding.
+- Added a fail-closed path-boundary check while collecting nested scenario sources.
 - Published `passoflow` 0.1.2 to crates.io through the guarded GitHub Actions workflow.
 - Fixed user-guide image links to match the local `/docs/assets` route and restored UI smoke coverage.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.

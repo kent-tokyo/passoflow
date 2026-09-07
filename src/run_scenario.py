@@ -479,14 +479,20 @@ def _rust_stop_requested() -> bool:
 
 
 def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
-    """Run a root scenario through Rust, inlining nested scenarios and table loops."""
+    """Run a root scenario through Rust, including Rust-owned nested expansion."""
     try:
         import passoflow_python
     except ImportError as error:
         raise RuntimeError(
             "PASSOFLOW_USE_RUST_ENGINE=1 requires the passoflow Python binding; install the wheel or build it with maturin"
         ) from error
-    expanded_steps = _expand_rust_nested_steps(steps)
+    sources = _collect_rust_nested_sources(yaml_path, steps)
+    expanded_steps = json.loads(
+        passoflow_python.expand_nested_steps(
+            yaml.safe_dump({"steps": steps}, sort_keys=False, allow_unicode=True),
+            json.dumps(sources, ensure_ascii=False),
+        )
+    )
     global RUST_ENGINE_TOTAL
     RUST_ENGINE_TOTAL = len(expanded_steps)
     _LOADED_TABLES.clear()
@@ -671,23 +677,30 @@ def _load_steps(yaml_path: str | Path) -> list[dict]:
     return scenario["steps"]
 
 
-def _expand_rust_nested_steps(steps: list[dict], ancestors: set[Path] | None = None) -> list[dict]:
-    """Inline validated nested scenarios so Rust receives one executable plan."""
-    ancestors = set() if ancestors is None else set(ancestors)
-    expanded: list[dict] = []
-    for step in steps:
-        action = step.get("action")
-        if action not in {"call_scenario", "repeat"}:
-            expanded.append(step)
+def _collect_rust_nested_sources(yaml_path: str | Path, steps: list[dict]) -> dict[str, str]:
+    """Load nested YAML documents into the bundle consumed by the Rust expander."""
+    del yaml_path  # Nested paths are scenario-rooted for compatibility with the existing runner.
+    sources: dict[str, str] = {}
+    pending = list(steps)
+    while pending:
+        step = pending.pop()
+        if not isinstance(step, dict) or step.get("action") not in {"call_scenario", "repeat"}:
             continue
-        nested_path = (SCENARIOS_DIR / step["path"]).resolve()
-        if nested_path in ancestors:
-            raise ValueError(f"circular nested scenario reference: {nested_path.name}")
-        nested_steps = _expand_rust_nested_steps(_load_steps(nested_path), ancestors | {nested_path})
-        repeat_count = int(step.get("count", 1)) if action == "repeat" else 1
-        for _ in range(repeat_count):
-            expanded.extend(nested_steps)
-    return expanded
+        target = step.get("path")
+        if not isinstance(target, str):
+            continue
+        nested_path = (SCENARIOS_DIR / target).resolve()
+        try:
+            key = nested_path.relative_to(SCENARIOS_DIR.resolve()).as_posix()
+        except ValueError as error:
+            raise ValueError(f"nested scenario path escapes the scenarios directory: {target}") from error
+        if key in sources:
+            continue
+        source = nested_path.read_text(encoding="utf-8")
+        sources[key] = source
+        nested = yaml.safe_load(source) or {}
+        pending.extend(nested.get("steps", []))
+    return sources
 
 
 # Keys allowed on every step regardless of action, set by the web UI rather than by hand.
