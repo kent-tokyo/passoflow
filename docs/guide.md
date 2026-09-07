@@ -16,7 +16,7 @@ For a first scenario, follow this path:
 
 Use the action panel on the left to find an operation and place it on the canvas in the center. The properties panel on the right contains the settings for the selected action. At the bottom, use the execution log, variables list, and imported-data view to check results.
 
-![PassoFlow screen overview](../images/screenshot_passoflow_01.png)
+![PassoFlow screen overview](docs-assets/screenshot_passoflow_01.png)
 
 _Screen overview example: actions are on the left, the flow is in the center, and the selected action's settings are on the right._
 

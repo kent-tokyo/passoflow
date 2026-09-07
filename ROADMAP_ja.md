@@ -174,6 +174,9 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 ### Phase 7 — 次期候補リリースと移行
 
 - [ ] 互換性、セキュリティ、パッケージング、UI smoke、OS別検査を実行する。
+- [x] 現在の候補に対するRust workspace互換性、test、Clippy checkを実行する。
+- [x] Python runner/bindingの対象回帰テストを実行する（13 passed、無関係なテストは環境制約で未実行）。
+- [x] Web UIのbuild、lint、smokeを実行する（17 smoke checks passed）。
 - [ ] 固定したローカル手順で画像精度、入力遅延、初回成功、セットアップ完了、復旧時間を測定する。
 - [ ] Rust相当機能の検証後に限り、Pythonだけの実装経路をdeprecatedにする。
 - [ ] 移行メモ、CHANGELOG、crates.io公開、PyPI公開、次期バージョン候補を準備する。

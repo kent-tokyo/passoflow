@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added a reusable DOM fixture and verified Rust fill/click/wait/preview end to end.
 - Strengthened the release wheel smoke test to require the exported `DomBrowser` API.
 - Added per-platform wheel smoke jobs for Linux, Windows, and macOS before PyPI publication.
+- Fixed user-guide image links to match the local `/docs/assets` route and restored UI smoke coverage.
 - Preserved live progress markers and step failure screenshot artifacts in the Rust-backed runner path.
 - Completed the handoff of Rust failure artifact paths into the existing runner/Web UI log stream.
 - Added step-boundary cooperative stop propagation for Rust-backed runs, with the existing kill fallback retained.

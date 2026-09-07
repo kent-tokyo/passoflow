@@ -175,6 +175,9 @@ Gate: Rust users can use the core from crates.io, and Python users can use the s
 ### Phase 7 — candidate release and deprecation
 
 - [ ] Run compatibility, security, packaging, UI smoke, and platform checks.
+- [x] Run Rust workspace compatibility, test, and Clippy checks for the current candidate.
+- [x] Run targeted Python runner/binding regression tests (13 passed; unrelated tests remain environment-blocked).
+- [x] Run Web UI build, lint, and smoke checks (17 smoke checks passed).
 - [ ] Measure image accuracy, input latency, first success, setup completion, and recovery time with fixed local protocols.
 - [ ] Deprecate Python-only implementations only after equivalent Rust behavior is verified.
 - [ ] Prepare migration notes, CHANGELOG, crates.io release, PyPI release, and the next version candidate.
