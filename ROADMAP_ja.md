@@ -90,6 +90,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] filesystemに依存しないRust nested scenario展開APIと、未登録・循環targetの安全検査を追加する。
 - [x] オプトインPython bridgeのnested `call_scenario` / `repeat`展開をRustへ委譲する。
 - [x] 変数と制御フロー計画をRust engineのインターフェースの背後へ移す。
+- [x] RustからPython callbackへ渡る未知アクションをdispatch前に明示的に拒否する。
 - [ ] YAML、ログ、スクリーンショット、再実行、既存Web UIの挙動を維持する。
 
 完了条件: 既存シナリオをスキーマ上の差異なく検証・実行できる。

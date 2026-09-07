@@ -80,6 +80,8 @@ The same concepts are exposed by `passoflow-core` as
   parameters from the Rust plan after strict step alignment. Python action
   functions remain the runtime adapter; variable mutation and dynamic control
   flow are evaluated by the stateful Rust engine.
+- The callback bridge rejects unknown actions explicitly before dispatch, even
+  if a caller bypasses the normal validator.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.

@@ -90,6 +90,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Add a filesystem-independent Rust nested-scenario expansion API with missing/circular-target safety checks.
 - [x] Delegate nested `call_scenario` and `repeat` expansion from the opt-in Python bridge to Rust.
 - [x] Move variable and control-flow planning behind the Rust engine interface.
+- [x] Reject unknown actions explicitly at the Rust-to-Python callback boundary.
 - [ ] Preserve YAML compatibility, logs, screenshots, guarded reruns, and the existing Web UI.
 
 Gate: existing scenarios validate and run without observable schema regression.

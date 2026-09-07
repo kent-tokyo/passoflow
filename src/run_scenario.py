@@ -436,6 +436,9 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
     action = step.get("action")
     if not isinstance(action, str) or action in {"if", "else", "endif"}:
         raise ValueError(f"Rust runtime callback received structural action: {action!r}")
+    action_handler = ACTIONS.get(action)
+    if action_handler is None:
+        raise ValueError(f"Rust runtime callback received unsupported action: {action!r}")
     step_number = int(step.get("index", 0))
     if RUST_ENGINE_TOTAL:
         print(f"@@PROGRESS@@{step_number}/{RUST_ENGINE_TOTAL}", flush=True)
@@ -444,7 +447,7 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
     logging.getLogger().addHandler(warning_handler)
     before_screenshot = _capture_step_screenshot() if RUN_ID else None
     try:
-        ACTIONS[action](step, variables)
+        action_handler(step, variables)
     except Exception as error:
         artifact_paths = _save_failure_context(before_screenshot, step_number, action)
         return json.dumps(
