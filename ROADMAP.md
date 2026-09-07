@@ -98,6 +98,7 @@ Gate: Rust validation agrees with the Python validator on the fixture corpus and
 - [x] Validate guarded rerun bounds consistently and reject invalid ranges before dispatch.
 - [x] Validate Rust runtime report status and event shape before handing events to the Web UI.
 - [x] Keep run-level `stopped` status distinct from per-action event outcomes.
+- [x] Reject boolean values masquerading as event step numbers at the runtime report boundary.
 - [x] Require the published wheel smoke tests to verify the exported warning contract API.
 - [x] Isolate launch readiness checks and test early exit/window timeout without starting an OS process.
 - [x] Propagate cooperative stop markers into the Rust-backed runner at step boundaries.

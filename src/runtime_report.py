@@ -17,7 +17,7 @@ def validate_runtime_report(report: object) -> dict:
     if not isinstance(events, list):
         raise RuntimeError("Rust engine returned a malformed event list")
     for event in events:
-        if not isinstance(event, dict) or not isinstance(event.get("step"), int):
+        if not isinstance(event, dict) or not isinstance(event.get("step"), int) or isinstance(event["step"], bool):
             raise RuntimeError("Rust engine returned a malformed event")
         if event.get("outcome") not in VALID_EVENT_OUTCOMES:
             raise RuntimeError("Rust engine returned an invalid event outcome")

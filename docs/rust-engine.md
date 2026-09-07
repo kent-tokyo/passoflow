@@ -172,6 +172,8 @@ The same concepts are exposed by `passoflow-core` as
   closed.
 - `stopped` is valid only for the run status, not for an individual action
   event outcome.
+- Event step numbers must be actual integers; boolean values are rejected even
+  though Python represents them as an `int` subclass.
 - Partial rerun bounds are 1-indexed, inclusive, and fail closed for zero,
   negative, reversed, or out-of-range values.
 - The Python runner logs those returned artifact paths, so the existing Web UI

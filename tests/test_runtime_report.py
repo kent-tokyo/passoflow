@@ -23,6 +23,7 @@ class RuntimeReportTests(unittest.TestCase):
             {"status": "success", "events": [{"step": 1, "outcome": "unknown"}]},
             {"status": "stopped", "events": [{"step": 1, "outcome": "stopped"}]},
             {"status": "success", "events": [{"step": "1", "outcome": "success"}]},
+            {"status": "success", "events": [{"step": True, "outcome": "success"}]},
         ]
         for report in invalid_reports:
             with self.assertRaises(RuntimeError):
