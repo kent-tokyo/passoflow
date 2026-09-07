@@ -122,6 +122,10 @@ The same concepts are exposed by `passoflow-core` as
   `RuntimeActionResult`; the stop callback is polled at step boundaries.
   This moves control flow, retries, variables, and events into Rust while
   allowing the existing Python OS adapters to remain the callback implementation.
+- `passoflow-core::Scenario::expand_nested_steps` expands a caller-supplied
+  nested-scenario bundle without filesystem access and fails closed on missing
+  or circular targets. The Python bridge still loads the bundle and performs
+  table preloading for compatibility until the next integration slice.
 - Runtime execution honors each step's `retry` and `retry_interval_ms` when
   present; the function arguments provide the fallback policy for steps without
   those fields.

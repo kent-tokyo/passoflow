@@ -608,6 +608,17 @@ pub enum ScenarioError {
     Yaml(#[from] serde_yaml::Error),
 }
 
+/// Errors raised while expanding a supplied nested-scenario bundle.
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum NestedScenarioError {
+    #[error("nested scenario '{path}' was not supplied")]
+    Missing { path: String },
+    #[error("circular nested scenario reference at '{path}'")]
+    Circular { path: String },
+    #[error("repeat scenario '{path}' requires a positive count")]
+    InvalidRepeat { path: String },
+}
+
 impl Scenario {
     /// Parse a scenario from YAML without performing semantic validation.
     /// # Errors
@@ -646,6 +657,22 @@ impl Scenario {
     /// Returns an error if the scenario cannot be serialized as YAML.
     pub fn to_yaml(&self) -> Result<String, ScenarioError> {
         Ok(serde_yaml::to_string(self)?)
+    }
+
+    /// Expand `call_scenario` and `repeat` steps from a caller-supplied bundle.
+    ///
+    /// The bundle is keyed by the same scenario-relative path stored in each
+    /// step. No filesystem access occurs here, so callers can keep loading and
+    /// permission policy outside the portable core.
+    /// # Errors
+    ///
+    /// Returns an error when a target is missing, circular, or has an invalid
+    /// repeat count.
+    pub fn expand_nested_steps(
+        &self,
+        scenarios: &BTreeMap<String, Self>,
+    ) -> Result<Vec<Step>, NestedScenarioError> {
+        expand_nested_steps(&self.steps, scenarios, &mut Vec::new())
     }
 
     /// Build a deterministic structural plan without invoking any OS adapter.
@@ -696,6 +723,56 @@ impl Scenario {
             steps,
         }
     }
+}
+
+fn expand_nested_steps(
+    steps: &[Step],
+    scenarios: &BTreeMap<String, Scenario>,
+    stack: &mut Vec<String>,
+) -> Result<Vec<Step>, NestedScenarioError> {
+    let mut expanded = Vec::new();
+    for step in steps {
+        if !matches!(step.action.as_str(), "call_scenario" | "repeat") {
+            expanded.push(step.clone());
+            continue;
+        }
+        let Some(path) = step.params.get("path").and_then(Value::as_str) else {
+            expanded.push(step.clone());
+            continue;
+        };
+        if stack.iter().any(|item| item == path) {
+            return Err(NestedScenarioError::Circular {
+                path: path.to_owned(),
+            });
+        }
+        let Some(target) = scenarios.get(path) else {
+            return Err(NestedScenarioError::Missing {
+                path: path.to_owned(),
+            });
+        };
+        let repeat_count = if step.action == "repeat" {
+            let Some(count) = step.params.get("count").and_then(Value::as_i64) else {
+                return Err(NestedScenarioError::InvalidRepeat {
+                    path: path.to_owned(),
+                });
+            };
+            if count <= 0 {
+                return Err(NestedScenarioError::InvalidRepeat {
+                    path: path.to_owned(),
+                });
+            }
+            usize::try_from(count).unwrap_or(usize::MAX)
+        } else {
+            1
+        };
+        stack.push(path.to_owned());
+        let nested = expand_nested_steps(&target.steps, scenarios, stack)?;
+        stack.pop();
+        for _ in 0..repeat_count {
+            expanded.extend(nested.iter().cloned());
+        }
+    }
+    Ok(expanded)
 }
 
 fn variable_definitions(step: &Step) -> Vec<String> {
@@ -1468,6 +1545,32 @@ mod tests {
         assert_eq!(
             Scenario::from_yaml(&normalized).expect("normalized YAML should parse"),
             scenario
+        );
+    }
+
+    #[test]
+    fn expands_nested_scenarios_without_filesystem_access_and_fails_closed() {
+        let root = Scenario::from_yaml(
+            "steps:\n  - action: call_scenario\n    path: child.yaml\n  - action: repeat\n    path: child.yaml\n    count: 2\n",
+        )
+        .expect("root should parse");
+        let child = Scenario::from_yaml("steps:\n  - action: wait\n    ms: 5\n")
+            .expect("child should parse");
+        let scenarios = BTreeMap::from([(String::from("child.yaml"), child)]);
+        let expanded = root
+            .expand_nested_steps(&scenarios)
+            .expect("nested scenarios should expand");
+        assert_eq!(expanded.len(), 3);
+        assert!(expanded.iter().all(|step| step.action == "wait"));
+
+        let missing =
+            Scenario::from_yaml("steps:\n  - action: call_scenario\n    path: missing.yaml\n")
+                .expect("missing target should parse");
+        assert_eq!(
+            missing.expand_nested_steps(&scenarios),
+            Err(super::NestedScenarioError::Missing {
+                path: "missing.yaml".to_owned()
+            })
         );
     }
 
