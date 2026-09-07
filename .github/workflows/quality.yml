@@ -30,6 +30,7 @@ jobs:
           python-version: '3.11'
       - run: python -m pip install PyYAML==6.0.3
       - run: PASSOFLOW_VALIDATE_BIN="$PWD/rust/target/debug/passoflow-validate" python -m unittest tests/test_rust_validator_bridge.py
+      - run: PASSOFLOW_VALIDATE_BIN="$PWD/rust/target/debug/passoflow-validate" python -m unittest tests/test_action_schema_contract.py
 
   rust-windows:
     name: Rust Windows adapter

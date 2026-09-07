@@ -54,6 +54,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 - [x] 制御フローと基本スキーマエラーを共有するRust/Python互換フィクスチャを追加する。
 - [x] 現行runnerの依存関係が導入済みの場合に実行するPython側互換テストを追加する。
 - [x] Rustから決定的なaction schemaを公開し、契約面を検証するCLI互換性テストを追加する。
+- [x] Rust CLI schemaとPython validator定義をCIで比較し、契約ずれを検出する。
 - [x] 画像の安全性、座標、信頼度、タイムアウト制約まで共有フィクスチャを拡張する。
 - [x] DOMタイムアウト、Webhook payload、条件値の制約を共有フィクスチャで一致させる。
 - [x] シナリオを検証して機械可読な診断を出力するRust CLIを追加する。

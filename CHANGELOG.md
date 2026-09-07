@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added the publishable `passoflow` umbrella crate as the stable Rust entry point.
 - Exposed the versioned action schema through the Rust core and Python binding for editor compatibility checks.
 - Added a Rust validator `--schema` output and a compatibility test that keeps the CLI schema aligned with the core.
+- Added a CI gate that compares the Rust action schema with the Python validator definition.
 - Added first-use desktop setup diagnostics for Windows screen capture and unsupported desktop platforms.
 - Published `passoflow` 0.1.2 to crates.io through the guarded GitHub Actions workflow.
 - Fixed user-guide image links to match the local `/docs/assets` route and restored UI smoke coverage.
