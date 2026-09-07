@@ -1974,8 +1974,15 @@ def start_run(filename: str, start: int | None = None, end: int | None = None) -
     if not path.exists():
         raise HTTPException(status_code=404, detail="Scenario not found")
     run_id = uuid.uuid4().hex
+    stop_file = app_root() / "logs" / f"run_{run_id}.stop"
     # reserved until the WebSocket starts the process
-    _active_runs[run_id] = {"process": None, "start": start, "end": end, "stop_requested": False}
+    _active_runs[run_id] = {
+        "process": None,
+        "start": start,
+        "end": end,
+        "stop_requested": False,
+        "stop_file": stop_file,
+    }
     return {"run_id": run_id, "filename": filename}
 
 
@@ -1989,6 +1996,10 @@ def stop_run(run_id: str) -> dict[str, str]:
     if run_info["process"] is None:
         raise HTTPException(status_code=409, detail="Run hasn't started yet")
     run_info["stop_requested"] = True
+    stop_file = run_info.get("stop_file")
+    if stop_file is not None:
+        stop_file.parent.mkdir(parents=True, exist_ok=True)
+        stop_file.write_text("stop\n", encoding="utf-8")
     run_info["process"].kill()
     return {"status": "stopping"}
 
@@ -2056,10 +2067,15 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
         cmd += ["--end", str(run_info["end"])]
     cmd += ["--run-id", run_id]
 
+    child_env = os.environ.copy()
+    stop_file = run_info.get("stop_file")
+    if stop_file is not None:
+        child_env["PASSOFLOW_STOP_FILE"] = str(stop_file)
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
+        env=child_env,
     )
     run_info["process"] = process
 
@@ -2112,6 +2128,12 @@ async def stream_run(websocket: WebSocket, run_id: str) -> None:
     finally:
         if process.returncode is None:
             process.kill()
+        stop_file = run_info.get("stop_file")
+        if stop_file is not None:
+            try:
+                stop_file.unlink()
+            except FileNotFoundError:
+                pass
         _active_runs.pop(run_id, None)
         try:
             await websocket.close()

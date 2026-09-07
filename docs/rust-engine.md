@@ -99,8 +99,9 @@ The same concepts are exposed by `passoflow-core` as
   the updated state. Fixed-count and table-row loops are supported; table-row
   variables are scoped to each iteration and restored afterward.
 - The Python binding exposes `run_runtime_state(yaml, variables_json,
-  tables_json, callback, run_id, attempts, interval_ms)`. The callback receives
-  one serialized step and state, then returns a serialized `RuntimeActionResult`.
+  tables_json, callback, stop_callback, run_id, attempts, interval_ms)`. The
+  callback receives one serialized step and state, then returns a serialized
+  `RuntimeActionResult`; the stop callback is polled at step boundaries.
   This moves control flow, retries, variables, and events into Rust while
   allowing the existing Python OS adapters to remain the callback implementation.
 - Runtime execution honors each step's `retry` and `retry_interval_ms` when
@@ -114,7 +115,8 @@ The same concepts are exposed by `passoflow-core` as
   returns step screenshot paths as failure artifacts when a run id is present.
 - The Python runner logs those returned artifact paths, so the existing Web UI
   stream receives them alongside the Rust event message. Cooperative stop
-  propagation remains open because the API currently stops subprocesses by kill.
+  propagation is now available at step boundaries; the API retains kill as a
+  fallback for the current subprocess lifecycle.
 - `ExecutionPlan::control_flow` exposes deterministic nested branch boundaries
   and contiguous loop ranges without evaluating conditions or invoking an OS
   adapter.

@@ -97,6 +97,7 @@ fn run_runtime_state(
     variables_json: &str,
     tables_json: &str,
     callback: Py<PyAny>,
+    stop_callback: Option<Py<PyAny>>,
     run_id: &str,
     attempts: u32,
     interval_ms: u64,
@@ -116,6 +117,7 @@ fn run_runtime_state(
         .map_err(|error| PyValueError::new_err(format!("invalid tables JSON: {error}")))?;
     let mut executor = PythonRuntimeExecutor { callback };
     let mut sleeper = NoopSleeper;
+    let stop_callback = stop_callback.as_ref();
     let report = run_with_runtime_state_and_tables(
         &scenario.execution_plan(),
         variables,
@@ -127,7 +129,17 @@ fn run_runtime_state(
             attempts,
             interval_ms,
         },
-        || false,
+        || {
+            stop_callback.is_some_and(|callback| {
+                Python::attach(|py| {
+                    callback
+                        .bind(py)
+                        .call0()
+                        .and_then(|value| value.extract::<bool>())
+                        .unwrap_or(false)
+                })
+            })
+        },
     )
     .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
     to_string(&report).map_err(|error| PyRuntimeError::new_err(error.to_string()))

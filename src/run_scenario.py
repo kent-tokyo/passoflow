@@ -472,6 +472,12 @@ def _rust_runtime_callback(step_json: str, state_json: str) -> str:
     )
 
 
+def _rust_stop_requested() -> bool:
+    """Return whether the API requested a cooperative stop for this process."""
+    stop_file = os.environ.get("PASSOFLOW_STOP_FILE")
+    return bool(stop_file and Path(stop_file).is_file())
+
+
 def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str | None) -> None:
     """Run a compatible root scenario through the opt-in Rust engine binding."""
     if any(step.get("action") in {"call_scenario", "repeat", "load_table"} for step in steps):
@@ -492,6 +498,7 @@ def _run_with_rust_engine(yaml_path: str | Path, steps: list[dict], run_id: str 
             "{}",
             "{}",
             _rust_runtime_callback,
+            _rust_stop_requested,
             run_id or "run",
             1,
             0,
