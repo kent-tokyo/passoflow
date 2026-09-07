@@ -14,6 +14,7 @@ import pyautogui
 import yaml
 
 from app_paths import app_root
+from run_range import resolve_run_range
 from action_contract import action_outcome_contract
 from input_actions import (
     activate_window,
@@ -1197,8 +1198,7 @@ def run_scenario(yaml_path: str | Path, start: int | None = None, end: int | Non
         if plan is not None:
             assert_plan_matches_steps(plan, all_steps)
             all_steps = steps_from_rust_plan(plan)
-    start_idx = (start - 1) if start else 0
-    end_idx = end if end else len(all_steps)
+    start_idx, end_idx = resolve_run_range(len(all_steps), start, end)
     steps = all_steps[start_idx:end_idx]
     if start or end:
         logger.info("Partial run: steps %d-%d of %d", start_idx + 1, end_idx, len(all_steps))
