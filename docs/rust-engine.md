@@ -89,6 +89,8 @@ The same concepts are exposed by `passoflow-core` as
 - The warning policy is exposed by `passoflow-core` and
   `passoflow-python.action_outcome_contract_json`; the Python callback keeps a
   compatibility fallback when the optional binding is unavailable.
+- The Python policy is isolated in the dependency-free `action_contract` module
+  so contract tests do not require desktop automation packages.
 - Windows input reports virtual-desktop bounds, active-window information,
   keyboard layout, monitor geometry, best-effort DPI, and capture availability.
   Other platforms use an explicit unsupported adapter rather than a no-op.
