@@ -167,6 +167,9 @@ The same concepts are exposed by `passoflow-core` as
   Rust path as well; structural ranges are validated before dispatch.
 - Progress markers and returned event step numbers remain global to the source
   scenario during a partial rerun.
+- The Python runner validates the Rust report status and event shape before
+  forwarding events to the existing UI log stream; malformed reports fail
+  closed.
 - Partial rerun bounds are 1-indexed, inclusive, and fail closed for zero,
   negative, reversed, or out-of-range values.
 - The Python runner logs those returned artifact paths, so the existing Web UI

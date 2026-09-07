@@ -15,6 +15,7 @@ import yaml
 
 from app_paths import app_root
 from run_range import resolve_run_range
+from runtime_report import validate_runtime_report
 from action_contract import action_outcome_contract
 from input_actions import (
     activate_window,
@@ -533,7 +534,7 @@ def _run_with_rust_engine(
     finally:
         RUST_ENGINE_TOTAL = None
         RUST_ENGINE_STEP_OFFSET = 0
-    report = json.loads(report_json)
+    report = validate_runtime_report(json.loads(report_json))
     for event in report.get("events", []):
         if isinstance(event, dict) and isinstance(event.get("step"), int):
             event["step"] += step_offset
