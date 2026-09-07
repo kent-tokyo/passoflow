@@ -156,6 +156,7 @@ passoflow-server     既存Reactエディタ向けローカルAPI
 
 - [x] PyO3/maturinの初期`passoflow-python` bindingを作り、正規化YAML、診断、execution plan、契約エラーを公開する。
 - [x] Python型stubとRust/Pythonで同じ契約動作をする例を用意する。
+- [x] callback runner APIを変更せず、ローカルRust DOM backendをPython bindingから公開する。
 - [x] 再利用可能な`passoflow-core`をcrates.ioへ公開する。engineはインターフェースが安定してから公開する。
 - [x] `CARGO_REGISTRY_TOKEN`を使い、`passoflow-core`から`passoflow-python`の順に公開するGitHub Actions経路を追加する。
 - [ ] platform wheelをPyPIへ公開し、クリーンな仮想環境で導入を検証する。

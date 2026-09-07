@@ -7,9 +7,78 @@ use passoflow_engine::{
     NoopSleeper, RuntimeActionResult, RuntimeState, RuntimeStepExecutor,
     run_with_runtime_state_and_tables,
 };
+use passoflow_web::{BrowserBackend, CdpBrowser, JsonCdpTransport, WaitState, WebSocketCdpWire};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use serde_json::{from_str, json, to_string};
+
+type RustDomBrowser = CdpBrowser<JsonCdpTransport<WebSocketCdpWire>>;
+
+/// Direct Rust DOM browser access for a local Chromium CDP endpoint.
+#[pyclass]
+struct DomBrowser {
+    inner: RustDomBrowser,
+}
+
+#[pymethods]
+impl DomBrowser {
+    /// Connect to a local Chromium `ws://` DevTools endpoint.
+    #[new]
+    fn new(endpoint: &str) -> PyResult<Self> {
+        RustDomBrowser::connect(endpoint)
+            .map(|inner| Self { inner })
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+
+    /// Navigate the connected browser page.
+    fn navigate(&mut self, url: &str) -> PyResult<()> {
+        self.inner
+            .navigate(url)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+
+    /// Click the first element matching a CSS selector.
+    fn click(&mut self, selector: &str) -> PyResult<()> {
+        self.inner
+            .click(selector)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+
+    /// Fill the first element matching a CSS selector.
+    fn fill(&mut self, selector: &str, text: &str) -> PyResult<()> {
+        self.inner
+            .fill(selector, text)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+
+    /// Wait for a selector to reach `attached`, `detached`, `hidden`, or `visible`.
+    #[pyo3(signature = (selector, state="visible", timeout_ms=10_000))]
+    fn wait_for(&mut self, selector: &str, state: &str, timeout_ms: u64) -> PyResult<()> {
+        let state = match state {
+            "attached" => WaitState::Attached,
+            "detached" => WaitState::Detached,
+            "hidden" => WaitState::Hidden,
+            "visible" => WaitState::Visible,
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "invalid wait state: {other}"
+                )));
+            }
+        };
+        self.inner
+            .wait_for(selector, state, timeout_ms)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+
+    /// Return selector match counts, samples, and conservative repair suggestions as JSON.
+    fn preview_selector(&mut self, selector: &str) -> PyResult<String> {
+        let preview = self
+            .inner
+            .preview_selector(selector)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+        to_string(&preview).map_err(|error| PyRuntimeError::new_err(error.to_string()))
+    }
+}
 
 /// Validate YAML and return the versioned Rust result contract as JSON.
 #[pyfunction]
@@ -148,6 +217,7 @@ fn run_runtime_state(
 /// PassoFlow's Rust contract binding module.
 #[pymodule]
 fn passoflow_python(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_class::<DomBrowser>()?;
     module.add_function(wrap_pyfunction!(validate_yaml, module)?)?;
     module.add_function(wrap_pyfunction!(normalize_yaml, module)?)?;
     module.add_function(wrap_pyfunction!(contract_version, module)?)?;

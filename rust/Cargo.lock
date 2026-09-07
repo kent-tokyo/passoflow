@@ -325,6 +325,7 @@ version = "0.1.2"
 dependencies = [
  "passoflow-core",
  "passoflow-engine",
+ "passoflow-web",
  "pyo3",
  "serde_json",
 ]

@@ -6,7 +6,7 @@ Windows向けのRPAツール。画面上の画像を検索してマウス操作(
 
 PassoFlow は個人用・ローカル実行を前提とした自動化ツールです。評価と開発の中心は、GUI操作、画像認識、シナリオ作成、再実行性、安全性、使いやすさに置きます。
 
-Rustのシナリオ契約は`passoflow` package（Pythonからのimport moduleは`passoflow_python`）で利用できます。公開wheelは`python -m pip install passoflow`で導入でき、開発時は`rust/crates/passoflow-python`で`maturin develop`を実行します。最小例は[`examples/python_binding.py`](examples/python_binding.py)を参照してください。
+Rustのシナリオ契約は`passoflow` package（Pythonからのimport moduleは`passoflow_python`）で利用できます。公開wheelは`python -m pip install passoflow`で導入でき、開発時は`rust/crates/passoflow-python`で`maturin develop`を実行します。bindingにはローカルChromium CDPを直接操作する`DomBrowser`もあります。接続方法は[`rust/crates/passoflow-python/README.md`](rust/crates/passoflow-python/README.md)、契約APIの最小例は[`examples/python_binding.py`](examples/python_binding.py)を参照してください。
 
 Rust移行の段階と、PyAutoGUIに依存しないPassoFlow独自実装の境界は、[Rustエンジン境界](docs/rust-engine.md)に記載しています。共有するYAMLとアクション結果の契約は[シナリオ契約](docs/scenario-contract.md)に要約しています。各Phaseの完了条件を満たすまで、現在のPython runnerを互換基準として維持します。
 

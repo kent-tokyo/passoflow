@@ -10,9 +10,20 @@ result = json.loads(passoflow_python.validate_yaml("title: Demo\nsteps: []\n"))
 print(result["valid"])
 ```
 
-The package validates and normalizes scenarios locally. Desktop input, screen
-capture, and browser automation remain outside this binding's current scope.
+The package validates and normalizes scenarios locally. It also exposes the
+opt-in Rust DOM backend for a local Chromium DevTools WebSocket endpoint:
+
+```python
+import json
+from passoflow_python import DomBrowser
+
+browser = DomBrowser("ws://127.0.0.1:9222/devtools/page/<target-id>")
+browser.navigate("https://example.test")
+print(json.loads(browser.preview_selector("#submit"))["count"])
+```
+
+The DOM backend is synchronous and local-only. Screen input and capture remain
+separate PassoFlow-owned adapter surfaces.
 
 See the [PassoFlow repository](https://github.com/kent-tokyo/passoflow) for
 the full contract and development instructions.
-

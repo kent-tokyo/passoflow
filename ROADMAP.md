@@ -156,6 +156,7 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 
 - [x] Build the initial `passoflow-python` PyO3/maturin binding, exposing normalized YAML, diagnostics, execution plans, and contract errors.
 - [x] Generate Python type stubs and provide a Rust/Python example with identical contract behavior.
+- [x] Expose the local Rust DOM backend through the Python binding without changing the callback runner API.
 - [x] Publish the reusable `passoflow-core` interface to crates.io; publish the
   engine only after its interface is stable.
 - [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
