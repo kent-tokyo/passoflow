@@ -29,6 +29,9 @@ For editor or integration discovery, `action_schema_json()` returns the
 versioned action names, required and optional parameters, and reserved
 step-metadata keys.
 
+`action_outcome_contract_json(action, on_error)` returns the stable warning
+policy for an action, including whether a warning may continue the scenario.
+
 `input_platform_info_json()` reports whether native desktop input is supported
 on the current platform and includes display, keyboard-layout, and permission
 diagnostics without sending input. The result is JSON so a setup screen or
