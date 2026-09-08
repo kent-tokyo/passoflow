@@ -353,7 +353,7 @@ impl WindowsInput {
             return Err(Self::native_error("GetForegroundWindow"));
         }
         let mut bounds = WindowRect::default();
-        if unsafe { get_window_rect(window, &mut bounds) } == 0
+        if unsafe { get_window_rect(window, &raw mut bounds) } == 0
             || bounds.right <= bounds.left
             || bounds.bottom <= bounds.top
         {
@@ -471,7 +471,7 @@ fn screen_point(point: Point, space: CoordinateSpace) -> Result<Point, InputErro
         ));
     }
     let mut bounds = WindowRect::default();
-    if unsafe { get_window_rect(window, &mut bounds) } == 0
+    if unsafe { get_window_rect(window, &raw mut bounds) } == 0
         || bounds.right <= bounds.left
         || bounds.bottom <= bounds.top
     {
