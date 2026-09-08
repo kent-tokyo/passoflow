@@ -313,7 +313,7 @@ impl WindowsCapture {
     /// captured.
     pub fn capture_window(&mut self, window: isize) -> Result<CapturedFrame, CaptureError> {
         let mut bounds = WindowRect::default();
-        if unsafe { get_window_rect(window, &mut bounds) } == 0
+        if unsafe { get_window_rect(window, &raw mut bounds) } == 0
             || bounds.right <= bounds.left
             || bounds.bottom <= bounds.top
         {
@@ -380,7 +380,7 @@ impl WindowsCapture {
                 0,
                 std::ptr::null(),
                 Some(enumerate_monitor),
-                &mut displays as *mut Vec<DisplayCaptureInfo> as isize,
+                (&raw mut displays) as *mut Vec<DisplayCaptureInfo> as isize,
             )
         };
         if result == 0 {
@@ -493,6 +493,7 @@ fn capture_gdi(left: i32, top: i32, width: u32, height: u32) -> Result<ImageFram
 }
 
 #[cfg(windows)]
+#[allow(clippy::too_many_arguments)]
 fn capture_gdi_bitmap(
     screen: Hdc,
     memory: Hdc,
@@ -538,14 +539,14 @@ fn capture_gdi_bitmap(
             0,
             height,
             pixels.as_mut_ptr(),
-            &mut info,
+            &raw mut info,
             DIB_RGB_COLORS,
         )
     } == 0
     {
         return Err(CaptureError::Native("GetDIBits failed".to_owned()));
     }
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
     }
     ImageFrame::new(width, height, pixels)
@@ -716,13 +717,14 @@ unsafe extern "system" fn enumerate_monitor(
         flags: 0,
         device: [0; 32],
     };
-    if unsafe { get_monitor_info(monitor, &mut info) } == 0 {
+    if unsafe { get_monitor_info(monitor, &raw mut info) } == 0 {
         return 1;
     }
     let mut dpi_x = 0;
     let mut dpi_y = 0;
-    let dpi = if unsafe { get_dpi_for_monitor(monitor, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y) }
-        >= 0
+    let dpi = if unsafe {
+        get_dpi_for_monitor(monitor, MDT_EFFECTIVE_DPI, &raw mut dpi_x, &raw mut dpi_y)
+    } >= 0
         && dpi_x > 0
         && dpi_y > 0
     {
