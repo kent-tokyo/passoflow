@@ -166,7 +166,7 @@ fn input_platform_info_json() -> PyResult<String> {
     #[cfg(windows)]
     let (supported, reason, info) = {
         let adapter = passoflow_input::WindowsInput::new();
-        (true, None, adapter.platform_info())
+        (true, None::<String>, adapter.platform_info())
     };
     #[cfg(not(windows))]
     let (supported, reason, info) = {
