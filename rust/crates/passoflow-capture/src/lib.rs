@@ -480,7 +480,9 @@ fn capture_gdi(left: i32, top: i32, width: u32, height: u32) -> Result<ImageFram
         ));
     }
     let previous = unsafe { select_object(memory, bitmap) };
-    let result = capture_gdi_bitmap(screen, memory, bitmap, left, top, width, height);
+    let result = capture_gdi_bitmap(
+        screen, memory, bitmap, left, top, width_i32, height_i32, width, height,
+    );
     unsafe {
         select_object(memory, previous);
         delete_object(bitmap);
@@ -497,6 +499,8 @@ fn capture_gdi_bitmap(
     bitmap: Hbitmap,
     left: i32,
     top: i32,
+    width_i32: i32,
+    height_i32: i32,
     width: u32,
     height: u32,
 ) -> Result<ImageFrame, CaptureError> {
