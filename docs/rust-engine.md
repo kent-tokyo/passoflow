@@ -19,13 +19,13 @@ compatibility baseline until each phase passes its gate.
 
 | Crate | Responsibility | Status |
 | --- | --- | --- |
-| `passoflow` | Stable umbrella crate re-exporting the published platform-independent contract | 0.1.2 published to crates.io |
+| `passoflow` | Stable umbrella crate re-exporting the published platform-independent contract | 0.1.3 release candidate |
 | `passoflow-core` | Scenario model, YAML validation, normalization, diagnostics, execution plan | Implemented |
 | `passoflow-engine` | Retry, warning/failure outcomes, stop requests, step-attempt events | Initial runner implemented |
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |
 | `passoflow-capture` | RGBA frames, regions, cropping, Windows GDI capture and diagnostics | Windows initial adapter implemented |
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
-| `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.2 crate published; PyPI wheel publication remains open |
+| `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.3 release candidate; PyPI publication remains open |
 | `passoflow-web` | DOM operation contract and recording backend | Initial boundary implemented |
 | `passoflow-server` | Local-only HTTP bootstrap for the React editor migration | Bootstrap endpoints implemented; scenario APIs remain Python |
 

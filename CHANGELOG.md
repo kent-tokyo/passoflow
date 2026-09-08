@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-08
+
 ### Added
 
+- Added the dependency-light `passoflow-server` Rust bootstrap with tested local `/api/health` and `/api/version` endpoints.
+- Added CI and documentation badges to both README variants.
 - Added a Windows one-click launcher that installs missing local dependencies, starts the API/UI, waits for readiness, and opens the browser.
 - Added a packaged-build launcher path that serves the built UI through FastAPI without requiring Node.js.
 - Added Python binding type stubs, a minimal usage example, and clean-wheel installation coverage.

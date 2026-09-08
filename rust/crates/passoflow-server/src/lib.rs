@@ -139,7 +139,7 @@ mod tests {
 
         let version = request("/api/version", "GET");
         assert!(version.starts_with("HTTP/1.1 200 OK"), "{version:?}");
-        assert!(version.contains("\"version\":\"0.1.2\""));
+        assert!(version.contains("\"version\":\"0.1.3\""));
     }
 
     #[test]

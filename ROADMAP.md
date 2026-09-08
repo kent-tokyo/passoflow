@@ -1,6 +1,6 @@
 # PassoFlow roadmap
 
-Updated 2026-09-06. Current version: **0.1.2**.
+Updated 2026-09-08. Current version: **0.1.3**.
 
 ## Product direction
 

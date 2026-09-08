@@ -9,7 +9,7 @@ input, capture, or browser dependencies.
 
 ```toml
 [dependencies]
-passoflow = "0.1.2"
+passoflow = "0.1.3"
 ```
 
 The lower-level `passoflow-core` crate remains available for applications that
