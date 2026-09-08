@@ -25,8 +25,6 @@ Rust移行の段階と、PyAutoGUIに依存しないPassoFlow独自実装の境�
 
 ライセンスは [MIT](LICENSE-MIT) または [Apache-2.0](LICENSE-APACHE) です。
 
-![スクリーンショット](images/screenshot_passoflow_01.png)
-
 ## まず使ってみる
 
 PassoFlow は、Windows上の個人の作業を画面から自動化するツールです。シナリオを作るために、最初からYAMLを編集する必要はありません。
