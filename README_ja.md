@@ -1,5 +1,7 @@
 # PassoFlow
 
+[![CI](https://github.com/kent-tokyo/passoflow/actions/workflows/quality.yml/badge.svg)](https://github.com/kent-tokyo/passoflow/actions/workflows/quality.yml)
+[![Docs](https://img.shields.io/badge/docs-user%20guide-4c8bf5)](https://github.com/kent-tokyo/passoflow/blob/main/docs/guide.md)
 ![Version](https://img.shields.io/badge/version-0.1.2-blue)
 
 Windows向けのRPAツール。画面上の画像を検索してマウス操作(移動・クリック・ダブルクリック)を行うほか、キーボード入力・クリップボード操作・ウィンドウ前面化・アプリ起動・ファイル操作・Excel/CSVの読み書きも行える。操作の並びはYAMLシナリオファイルで記述する。

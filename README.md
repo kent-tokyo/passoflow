@@ -1,5 +1,7 @@
 # PassoFlow
 
+[![CI](https://github.com/kent-tokyo/passoflow/actions/workflows/quality.yml/badge.svg)](https://github.com/kent-tokyo/passoflow/actions/workflows/quality.yml)
+[![Docs](https://img.shields.io/badge/docs-user%20guide-4c8bf5)](https://github.com/kent-tokyo/passoflow/blob/main/docs/guide.md)
 ![Version](https://img.shields.io/badge/version-0.1.2-blue)
 
 An RPA tool for Windows that searches for images on screen and performs mouse actions (move, click, double-click), as well as keyboard input, clipboard operations, window activation, app launching, file operations, and reading/writing Excel/CSV data. The sequence of operations is described in a YAML scenario file.
