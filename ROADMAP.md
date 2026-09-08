@@ -180,6 +180,7 @@ Gate: Rust capture and image actions meet the current accuracy target and have r
 - [x] Flatten validated `call_scenario` and `repeat` steps before the opt-in Rust bridge builds its plan.
 - [ ] Replace Python orchestration with the Rust engine while retaining only explicitly scoped platform adapters.
 - [ ] Add `passoflow-server` as a local-only API compatible with the current React editor.
+  - [x] Add the dependency-light Rust bootstrap with `/api/health` and `/api/version` route tests.
 - [ ] Keep the current palette, canvas, parameter panel, dialogs, logs, focus behavior, and light/dark visual treatment behaviorally and visually compatible.
 
 Gate: successful, warned, failed, stopped, and recovered scenarios behave consistently through the Rust engine.

@@ -27,7 +27,7 @@ compatibility baseline until each phase passes its gate.
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
 | `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.2 crate published; PyPI wheel publication remains open |
 | `passoflow-web` | DOM operation contract and recording backend | Initial boundary implemented |
-| `passoflow-server` | Future Rust local API compatible with the React editor | Planned |
+| `passoflow-server` | Local-only HTTP bootstrap for the React editor migration | Bootstrap endpoints implemented; scenario APIs remain Python |
 
 ## Replaced capability boundary
 

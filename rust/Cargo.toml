@@ -9,6 +9,7 @@ members = [
     "crates/passoflow-web",
     "crates/passoflow-engine",
     "crates/passoflow-python",
+    "crates/passoflow-server",
 ]
 
 [workspace.package]
