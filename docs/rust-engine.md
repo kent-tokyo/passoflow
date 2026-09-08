@@ -25,7 +25,7 @@ compatibility baseline until each phase passes its gate.
 | `passoflow-input` | Typed input events, safety checks, recording backend, Windows `user32` adapter | Windows initial adapter implemented |
 | `passoflow-capture` | RGBA frames, regions, cropping, Windows GDI capture and diagnostics | Windows initial adapter implemented |
 | `passoflow-vision` | Region-bounded RGB matching, candidate ordering, ambiguity guard, image executors | Initial image path implemented |
-| `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.3 release candidate; PyPI publication remains open |
+| `passoflow-python` | PyO3 binding for validation, normalization, plans, and callback-backed runtime execution | 0.1.3 PyPI wheel published; Rust crate remains internal |
 | `passoflow-web` | DOM operation contract and recording backend | Initial boundary implemented |
 | `passoflow-server` | Local-only HTTP bootstrap for the React editor migration | Bootstrap endpoints implemented; scenario APIs remain Python |
 
@@ -235,8 +235,8 @@ input to the operating system.
 
 The remaining migration work is validating the WebSocket adapter against a live
 Chromium endpoint, replacing the remaining Python orchestration around nested
-scenario expansion and table preloading, a local Rust-compatible API, platform
-wheels, and PyPI installation verification. `passoflow`, `passoflow-core`,
-and the `passoflow-python` crate are published; the Python wheel remains open.
+scenario expansion and table preloading, and a local Rust-compatible API.
+`passoflow` and `passoflow-core` 0.1.3 are published, and the 0.1.3 Python
+wheel is published to PyPI; `passoflow-python` remains an internal Rust crate.
 See the
 [roadmap](../ROADMAP.md) for the phase order and completion criteria.

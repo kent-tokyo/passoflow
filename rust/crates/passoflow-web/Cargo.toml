@@ -7,7 +7,6 @@ description = "PassoFlow-owned DOM browser operation contracts"
 repository.workspace = true
 license.workspace = true
 publish = false
-
 [features]
 default = []
 websocket = ["dep:tungstenite"]

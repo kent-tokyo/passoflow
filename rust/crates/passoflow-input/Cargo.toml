@@ -7,7 +7,6 @@ description = "PassoFlow-owned input contracts and safety boundary"
 repository.workspace = true
 license.workspace = true
 publish = false
-
 [lints]
 workspace = true
 

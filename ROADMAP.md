@@ -194,11 +194,11 @@ Gate: successful, warned, failed, stopped, and recovered scenarios behave consis
 - [x] Publish the reusable `passoflow-core` interface to crates.io; publish the
   engine only after its interface is stable.
 - [x] Add a publishable `passoflow` umbrella crate that re-exports the stable core contract.
-- [x] Publish `passoflow` 0.1.2 to crates.io using the guarded GitHub Actions workflow.
-- [x] Add the guarded GitHub Actions publish path for `passoflow-core` followed by `passoflow-python` using `CARGO_REGISTRY_TOKEN`.
+- [x] Publish `passoflow` 0.1.3 to crates.io using the guarded GitHub Actions workflow.
+- [x] Add the guarded GitHub Actions publish path for `passoflow-core` using `CARGO_REGISTRY_TOKEN`; publish the Python binding through the PyPI wheel workflow.
 - [x] Guard Rust publishing workflows with VERSION/Cargo metadata preflight checks.
-- [ ] Publish platform wheels to PyPI and test clean virtual-environment installation.
-- [x] Build the 0.1.2 wheel locally and verify its exported API in a clean virtual environment.
+- [x] Publish platform wheels to PyPI and test clean virtual-environment installation.
+- [x] Build the 0.1.3 wheel and verify its exported API in a clean virtual environment.
 - [x] Run a live Chromium CDP smoke test from the clean wheel for navigation, waiting, selector preview, and click.
 - [x] Verify Rust DOM fill, click, wait, and selector preview against a reusable local HTML fixture.
 - [x] Require the release workflow wheel smoke test to assert the exported `DomBrowser` API.

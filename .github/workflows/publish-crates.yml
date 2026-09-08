@@ -62,14 +62,7 @@ jobs:
 
           publish_crate passoflow-core rust/crates/passoflow-core/Cargo.toml
           wait_for_crate passoflow-core
-          publish_crate passoflow-input rust/crates/passoflow-input/Cargo.toml
-          publish_crate passoflow-web rust/crates/passoflow-web/Cargo.toml
-          wait_for_crate passoflow-web
-          publish_crate passoflow-engine rust/crates/passoflow-engine/Cargo.toml
-          wait_for_crate passoflow-engine
-
-          # Python binding publication is intentionally last because its crate
-          # depends on the published core, engine, input, and web contracts.
-          publish_crate passoflow-python rust/crates/passoflow-python/Cargo.toml
+          # Engine/input/web remain internal publish = false crates. The
+          # Python binding is distributed through the PyPI wheel workflow.
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
