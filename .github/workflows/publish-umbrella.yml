@@ -19,7 +19,7 @@ jobs:
           version="$(tr -d '[:space:]' < VERSION)"
           test -n "$version"
           grep -qx "version = \"$version\"" rust/Cargo.toml
-          grep -qx "version = \"$version\"" rust/crates/passoflow/Cargo.toml
+          grep -qx "version.workspace = true" rust/crates/passoflow/Cargo.toml
 
   publish:
     name: Publish passoflow
