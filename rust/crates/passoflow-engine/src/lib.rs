@@ -391,14 +391,10 @@ where
             let branch_start = if take_true {
                 index + 1
             } else {
-                boundary
-                    .else_step
-                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+                boundary.else_step.unwrap_or(boundary.endif_step) as usize
             };
             let branch_end = if take_true {
-                boundary
-                    .else_step
-                    .map_or(boundary.endif_step, |else_step| else_step) as usize
+                boundary.else_step.unwrap_or(boundary.endif_step) as usize
             } else {
                 boundary.endif_step as usize
             };
