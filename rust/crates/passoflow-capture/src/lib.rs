@@ -380,7 +380,7 @@ impl WindowsCapture {
                 0,
                 std::ptr::null(),
                 Some(enumerate_monitor),
-                (&raw mut displays) as *mut Vec<DisplayCaptureInfo> as isize,
+                (&raw mut displays) as isize,
             )
         };
         if result == 0 {
